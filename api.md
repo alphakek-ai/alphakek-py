@@ -8,23 +8,7 @@ from alphakek.types import User
 
 Methods:
 
-- <code title="get /account">client.accounts.<a href="./src/alphakek/resources/accounts/accounts.py">retrieve</a>() -> <a href="./src/alphakek/types/user.py">User</a></code>
-
-## ServiceTokens
-
-Types:
-
-```python
-from alphakek.types.accounts import ServiceTokenCreatedPayload, ServiceTokenList
-```
-
-## Promocodes
-
-Types:
-
-```python
-from alphakek.types.accounts import RedeemResponse
-```
+- <code title="get /account">client.accounts.<a href="./src/alphakek/resources/accounts.py">retrieve</a>() -> <a href="./src/alphakek/types/user.py">User</a></code>
 
 # Knowledge
 
