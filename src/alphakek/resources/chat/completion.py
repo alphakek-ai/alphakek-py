@@ -7,41 +7,41 @@ from typing_extensions import Literal
 
 import httpx
 
-from ..types import chat_completions_params
-from .._types import NOT_GIVEN, Body, Query, Headers, NotGiven
-from .._utils import (
+from ..._types import NOT_GIVEN, Body, Query, Headers, NotGiven
+from ..._utils import (
     maybe_transform,
     async_maybe_transform,
 )
-from .._compat import cached_property
-from .._resource import SyncAPIResource, AsyncAPIResource
-from .._response import (
+from ..._compat import cached_property
+from ..._resource import SyncAPIResource, AsyncAPIResource
+from ..._response import (
     to_raw_response_wrapper,
     to_streamed_response_wrapper,
     async_to_raw_response_wrapper,
     async_to_streamed_response_wrapper,
 )
-from .._base_client import (
+from ...types.chat import completion_create_params
+from ..._base_client import (
     make_request_options,
 )
-from ..types.chat_completion import ChatCompletion
+from ...types.chat.chat_completion import ChatCompletion
 
-__all__ = ["ChatsResource", "AsyncChatsResource"]
+__all__ = ["CompletionResource", "AsyncCompletionResource"]
 
 
-class ChatsResource(SyncAPIResource):
+class CompletionResource(SyncAPIResource):
     @cached_property
-    def with_raw_response(self) -> ChatsResourceWithRawResponse:
-        return ChatsResourceWithRawResponse(self)
+    def with_raw_response(self) -> CompletionResourceWithRawResponse:
+        return CompletionResourceWithRawResponse(self)
 
     @cached_property
-    def with_streaming_response(self) -> ChatsResourceWithStreamingResponse:
-        return ChatsResourceWithStreamingResponse(self)
+    def with_streaming_response(self) -> CompletionResourceWithStreamingResponse:
+        return CompletionResourceWithStreamingResponse(self)
 
-    def completions(
+    def create(
         self,
         *,
-        messages: Iterable[chat_completions_params.Message],
+        messages: Iterable[completion_create_params.Message],
         model: Literal["versa", "nexus", "eclipse"],
         persona: Optional[str] | NotGiven = NOT_GIVEN,
         stream: bool | NotGiven = NOT_GIVEN,
@@ -73,7 +73,7 @@ class ChatsResource(SyncAPIResource):
                     "persona": persona,
                     "stream": stream,
                 },
-                chat_completions_params.ChatCompletionsParams,
+                completion_create_params.CompletionCreateParams,
             ),
             options=make_request_options(
                 extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
@@ -82,19 +82,19 @@ class ChatsResource(SyncAPIResource):
         )
 
 
-class AsyncChatsResource(AsyncAPIResource):
+class AsyncCompletionResource(AsyncAPIResource):
     @cached_property
-    def with_raw_response(self) -> AsyncChatsResourceWithRawResponse:
-        return AsyncChatsResourceWithRawResponse(self)
+    def with_raw_response(self) -> AsyncCompletionResourceWithRawResponse:
+        return AsyncCompletionResourceWithRawResponse(self)
 
     @cached_property
-    def with_streaming_response(self) -> AsyncChatsResourceWithStreamingResponse:
-        return AsyncChatsResourceWithStreamingResponse(self)
+    def with_streaming_response(self) -> AsyncCompletionResourceWithStreamingResponse:
+        return AsyncCompletionResourceWithStreamingResponse(self)
 
-    async def completions(
+    async def create(
         self,
         *,
-        messages: Iterable[chat_completions_params.Message],
+        messages: Iterable[completion_create_params.Message],
         model: Literal["versa", "nexus", "eclipse"],
         persona: Optional[str] | NotGiven = NOT_GIVEN,
         stream: bool | NotGiven = NOT_GIVEN,
@@ -126,7 +126,7 @@ class AsyncChatsResource(AsyncAPIResource):
                     "persona": persona,
                     "stream": stream,
                 },
-                chat_completions_params.ChatCompletionsParams,
+                completion_create_params.CompletionCreateParams,
             ),
             options=make_request_options(
                 extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
@@ -135,37 +135,37 @@ class AsyncChatsResource(AsyncAPIResource):
         )
 
 
-class ChatsResourceWithRawResponse:
-    def __init__(self, chats: ChatsResource) -> None:
-        self._chats = chats
+class CompletionResourceWithRawResponse:
+    def __init__(self, completion: CompletionResource) -> None:
+        self._completion = completion
 
-        self.completions = to_raw_response_wrapper(
-            chats.completions,
+        self.create = to_raw_response_wrapper(
+            completion.create,
         )
 
 
-class AsyncChatsResourceWithRawResponse:
-    def __init__(self, chats: AsyncChatsResource) -> None:
-        self._chats = chats
+class AsyncCompletionResourceWithRawResponse:
+    def __init__(self, completion: AsyncCompletionResource) -> None:
+        self._completion = completion
 
-        self.completions = async_to_raw_response_wrapper(
-            chats.completions,
+        self.create = async_to_raw_response_wrapper(
+            completion.create,
         )
 
 
-class ChatsResourceWithStreamingResponse:
-    def __init__(self, chats: ChatsResource) -> None:
-        self._chats = chats
+class CompletionResourceWithStreamingResponse:
+    def __init__(self, completion: CompletionResource) -> None:
+        self._completion = completion
 
-        self.completions = to_streamed_response_wrapper(
-            chats.completions,
+        self.create = to_streamed_response_wrapper(
+            completion.create,
         )
 
 
-class AsyncChatsResourceWithStreamingResponse:
-    def __init__(self, chats: AsyncChatsResource) -> None:
-        self._chats = chats
+class AsyncCompletionResourceWithStreamingResponse:
+    def __init__(self, completion: AsyncCompletionResource) -> None:
+        self._completion = completion
 
-        self.completions = async_to_streamed_response_wrapper(
-            chats.completions,
+        self.create = async_to_streamed_response_wrapper(
+            completion.create,
         )
