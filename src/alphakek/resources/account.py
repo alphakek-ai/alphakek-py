@@ -18,19 +18,19 @@ from .._base_client import (
     make_request_options,
 )
 
-__all__ = ["AccountsResource", "AsyncAccountsResource"]
+__all__ = ["AccountResource", "AsyncAccountResource"]
 
 
-class AccountsResource(SyncAPIResource):
+class AccountResource(SyncAPIResource):
     @cached_property
-    def with_raw_response(self) -> AccountsResourceWithRawResponse:
-        return AccountsResourceWithRawResponse(self)
+    def with_raw_response(self) -> AccountResourceWithRawResponse:
+        return AccountResourceWithRawResponse(self)
 
     @cached_property
-    def with_streaming_response(self) -> AccountsResourceWithStreamingResponse:
-        return AccountsResourceWithStreamingResponse(self)
+    def with_streaming_response(self) -> AccountResourceWithStreamingResponse:
+        return AccountResourceWithStreamingResponse(self)
 
-    def retrieve(
+    def info(
         self,
         *,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -50,16 +50,16 @@ class AccountsResource(SyncAPIResource):
         )
 
 
-class AsyncAccountsResource(AsyncAPIResource):
+class AsyncAccountResource(AsyncAPIResource):
     @cached_property
-    def with_raw_response(self) -> AsyncAccountsResourceWithRawResponse:
-        return AsyncAccountsResourceWithRawResponse(self)
+    def with_raw_response(self) -> AsyncAccountResourceWithRawResponse:
+        return AsyncAccountResourceWithRawResponse(self)
 
     @cached_property
-    def with_streaming_response(self) -> AsyncAccountsResourceWithStreamingResponse:
-        return AsyncAccountsResourceWithStreamingResponse(self)
+    def with_streaming_response(self) -> AsyncAccountResourceWithStreamingResponse:
+        return AsyncAccountResourceWithStreamingResponse(self)
 
-    async def retrieve(
+    async def info(
         self,
         *,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -79,37 +79,37 @@ class AsyncAccountsResource(AsyncAPIResource):
         )
 
 
-class AccountsResourceWithRawResponse:
-    def __init__(self, accounts: AccountsResource) -> None:
-        self._accounts = accounts
+class AccountResourceWithRawResponse:
+    def __init__(self, account: AccountResource) -> None:
+        self._account = account
 
-        self.retrieve = to_raw_response_wrapper(
-            accounts.retrieve,
+        self.info = to_raw_response_wrapper(
+            account.info,
         )
 
 
-class AsyncAccountsResourceWithRawResponse:
-    def __init__(self, accounts: AsyncAccountsResource) -> None:
-        self._accounts = accounts
+class AsyncAccountResourceWithRawResponse:
+    def __init__(self, account: AsyncAccountResource) -> None:
+        self._account = account
 
-        self.retrieve = async_to_raw_response_wrapper(
-            accounts.retrieve,
+        self.info = async_to_raw_response_wrapper(
+            account.info,
         )
 
 
-class AccountsResourceWithStreamingResponse:
-    def __init__(self, accounts: AccountsResource) -> None:
-        self._accounts = accounts
+class AccountResourceWithStreamingResponse:
+    def __init__(self, account: AccountResource) -> None:
+        self._account = account
 
-        self.retrieve = to_streamed_response_wrapper(
-            accounts.retrieve,
+        self.info = to_streamed_response_wrapper(
+            account.info,
         )
 
 
-class AsyncAccountsResourceWithStreamingResponse:
-    def __init__(self, accounts: AsyncAccountsResource) -> None:
-        self._accounts = accounts
+class AsyncAccountResourceWithStreamingResponse:
+    def __init__(self, account: AsyncAccountResource) -> None:
+        self._account = account
 
-        self.retrieve = async_to_streamed_response_wrapper(
-            accounts.retrieve,
+        self.info = async_to_streamed_response_wrapper(
+            account.info,
         )

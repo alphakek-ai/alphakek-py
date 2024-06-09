@@ -14,17 +14,17 @@ from alphakek.types import User
 base_url = os.environ.get("TEST_API_BASE_URL", "http://127.0.0.1:4010")
 
 
-class TestAccounts:
+class TestAccount:
     parametrize = pytest.mark.parametrize("client", [False, True], indirect=True, ids=["loose", "strict"])
 
     @parametrize
-    def test_method_retrieve(self, client: Alphakek) -> None:
-        account = client.accounts.retrieve()
+    def test_method_info(self, client: Alphakek) -> None:
+        account = client.account.info()
         assert_matches_type(User, account, path=["response"])
 
     @parametrize
-    def test_raw_response_retrieve(self, client: Alphakek) -> None:
-        response = client.accounts.with_raw_response.retrieve()
+    def test_raw_response_info(self, client: Alphakek) -> None:
+        response = client.account.with_raw_response.info()
 
         assert response.is_closed is True
         assert response.http_request.headers.get("X-Stainless-Lang") == "python"
@@ -32,8 +32,8 @@ class TestAccounts:
         assert_matches_type(User, account, path=["response"])
 
     @parametrize
-    def test_streaming_response_retrieve(self, client: Alphakek) -> None:
-        with client.accounts.with_streaming_response.retrieve() as response:
+    def test_streaming_response_info(self, client: Alphakek) -> None:
+        with client.account.with_streaming_response.info() as response:
             assert not response.is_closed
             assert response.http_request.headers.get("X-Stainless-Lang") == "python"
 
@@ -43,17 +43,17 @@ class TestAccounts:
         assert cast(Any, response.is_closed) is True
 
 
-class TestAsyncAccounts:
+class TestAsyncAccount:
     parametrize = pytest.mark.parametrize("async_client", [False, True], indirect=True, ids=["loose", "strict"])
 
     @parametrize
-    async def test_method_retrieve(self, async_client: AsyncAlphakek) -> None:
-        account = await async_client.accounts.retrieve()
+    async def test_method_info(self, async_client: AsyncAlphakek) -> None:
+        account = await async_client.account.info()
         assert_matches_type(User, account, path=["response"])
 
     @parametrize
-    async def test_raw_response_retrieve(self, async_client: AsyncAlphakek) -> None:
-        response = await async_client.accounts.with_raw_response.retrieve()
+    async def test_raw_response_info(self, async_client: AsyncAlphakek) -> None:
+        response = await async_client.account.with_raw_response.info()
 
         assert response.is_closed is True
         assert response.http_request.headers.get("X-Stainless-Lang") == "python"
@@ -61,8 +61,8 @@ class TestAsyncAccounts:
         assert_matches_type(User, account, path=["response"])
 
     @parametrize
-    async def test_streaming_response_retrieve(self, async_client: AsyncAlphakek) -> None:
-        async with async_client.accounts.with_streaming_response.retrieve() as response:
+    async def test_streaming_response_info(self, async_client: AsyncAlphakek) -> None:
+        async with async_client.account.with_streaming_response.info() as response:
             assert not response.is_closed
             assert response.http_request.headers.get("X-Stainless-Lang") == "python"
 

@@ -46,19 +46,19 @@ __all__ = [
 
 
 class Alphakek(SyncAPIClient):
-    accounts: resources.AccountsResource
+    account: resources.AccountResource
     knowledge: resources.KnowledgeResource
     chats: resources.ChatsResource
     with_raw_response: AlphakekWithRawResponse
     with_streaming_response: AlphakekWithStreamedResponse
 
     # client options
-    bearer_token: str
+    api_key: str
 
     def __init__(
         self,
         *,
-        bearer_token: str | None = None,
+        api_key: str | None = None,
         base_url: str | httpx.URL | None = None,
         timeout: Union[float, Timeout, None, NotGiven] = NOT_GIVEN,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -80,15 +80,15 @@ class Alphakek(SyncAPIClient):
     ) -> None:
         """Construct a new synchronous alphakek client instance.
 
-        This automatically infers the `bearer_token` argument from the `ALPHAKEK_BEARER_TOKEN` environment variable if it is not provided.
+        This automatically infers the `api_key` argument from the `ALPHA_API_TOKEN` environment variable if it is not provided.
         """
-        if bearer_token is None:
-            bearer_token = os.environ.get("ALPHAKEK_BEARER_TOKEN")
-        if bearer_token is None:
+        if api_key is None:
+            api_key = os.environ.get("ALPHA_API_TOKEN")
+        if api_key is None:
             raise AlphakekError(
-                "The bearer_token client option must be set either by passing bearer_token to the client or by setting the ALPHAKEK_BEARER_TOKEN environment variable"
+                "The api_key client option must be set either by passing api_key to the client or by setting the ALPHA_API_TOKEN environment variable"
             )
-        self.bearer_token = bearer_token
+        self.api_key = api_key
 
         if base_url is None:
             base_url = os.environ.get("ALPHAKEK_BASE_URL")
@@ -106,7 +106,7 @@ class Alphakek(SyncAPIClient):
             _strict_response_validation=_strict_response_validation,
         )
 
-        self.accounts = resources.AccountsResource(self)
+        self.account = resources.AccountResource(self)
         self.knowledge = resources.KnowledgeResource(self)
         self.chats = resources.ChatsResource(self)
         self.with_raw_response = AlphakekWithRawResponse(self)
@@ -120,8 +120,8 @@ class Alphakek(SyncAPIClient):
     @property
     @override
     def auth_headers(self) -> dict[str, str]:
-        bearer_token = self.bearer_token
-        return {"Authorization": f"Bearer {bearer_token}"}
+        api_key = self.api_key
+        return {"Authorization": f"Bearer {api_key}"}
 
     @property
     @override
@@ -135,7 +135,7 @@ class Alphakek(SyncAPIClient):
     def copy(
         self,
         *,
-        bearer_token: str | None = None,
+        api_key: str | None = None,
         base_url: str | httpx.URL | None = None,
         timeout: float | Timeout | None | NotGiven = NOT_GIVEN,
         http_client: httpx.Client | None = None,
@@ -169,7 +169,7 @@ class Alphakek(SyncAPIClient):
 
         http_client = http_client or self._client
         return self.__class__(
-            bearer_token=bearer_token or self.bearer_token,
+            api_key=api_key or self.api_key,
             base_url=base_url or self.base_url,
             timeout=self.timeout if isinstance(timeout, NotGiven) else timeout,
             http_client=http_client,
@@ -218,19 +218,19 @@ class Alphakek(SyncAPIClient):
 
 
 class AsyncAlphakek(AsyncAPIClient):
-    accounts: resources.AsyncAccountsResource
+    account: resources.AsyncAccountResource
     knowledge: resources.AsyncKnowledgeResource
     chats: resources.AsyncChatsResource
     with_raw_response: AsyncAlphakekWithRawResponse
     with_streaming_response: AsyncAlphakekWithStreamedResponse
 
     # client options
-    bearer_token: str
+    api_key: str
 
     def __init__(
         self,
         *,
-        bearer_token: str | None = None,
+        api_key: str | None = None,
         base_url: str | httpx.URL | None = None,
         timeout: Union[float, Timeout, None, NotGiven] = NOT_GIVEN,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -252,15 +252,15 @@ class AsyncAlphakek(AsyncAPIClient):
     ) -> None:
         """Construct a new async alphakek client instance.
 
-        This automatically infers the `bearer_token` argument from the `ALPHAKEK_BEARER_TOKEN` environment variable if it is not provided.
+        This automatically infers the `api_key` argument from the `ALPHA_API_TOKEN` environment variable if it is not provided.
         """
-        if bearer_token is None:
-            bearer_token = os.environ.get("ALPHAKEK_BEARER_TOKEN")
-        if bearer_token is None:
+        if api_key is None:
+            api_key = os.environ.get("ALPHA_API_TOKEN")
+        if api_key is None:
             raise AlphakekError(
-                "The bearer_token client option must be set either by passing bearer_token to the client or by setting the ALPHAKEK_BEARER_TOKEN environment variable"
+                "The api_key client option must be set either by passing api_key to the client or by setting the ALPHA_API_TOKEN environment variable"
             )
-        self.bearer_token = bearer_token
+        self.api_key = api_key
 
         if base_url is None:
             base_url = os.environ.get("ALPHAKEK_BASE_URL")
@@ -278,7 +278,7 @@ class AsyncAlphakek(AsyncAPIClient):
             _strict_response_validation=_strict_response_validation,
         )
 
-        self.accounts = resources.AsyncAccountsResource(self)
+        self.account = resources.AsyncAccountResource(self)
         self.knowledge = resources.AsyncKnowledgeResource(self)
         self.chats = resources.AsyncChatsResource(self)
         self.with_raw_response = AsyncAlphakekWithRawResponse(self)
@@ -292,8 +292,8 @@ class AsyncAlphakek(AsyncAPIClient):
     @property
     @override
     def auth_headers(self) -> dict[str, str]:
-        bearer_token = self.bearer_token
-        return {"Authorization": f"Bearer {bearer_token}"}
+        api_key = self.api_key
+        return {"Authorization": f"Bearer {api_key}"}
 
     @property
     @override
@@ -307,7 +307,7 @@ class AsyncAlphakek(AsyncAPIClient):
     def copy(
         self,
         *,
-        bearer_token: str | None = None,
+        api_key: str | None = None,
         base_url: str | httpx.URL | None = None,
         timeout: float | Timeout | None | NotGiven = NOT_GIVEN,
         http_client: httpx.AsyncClient | None = None,
@@ -341,7 +341,7 @@ class AsyncAlphakek(AsyncAPIClient):
 
         http_client = http_client or self._client
         return self.__class__(
-            bearer_token=bearer_token or self.bearer_token,
+            api_key=api_key or self.api_key,
             base_url=base_url or self.base_url,
             timeout=self.timeout if isinstance(timeout, NotGiven) else timeout,
             http_client=http_client,
@@ -391,28 +391,28 @@ class AsyncAlphakek(AsyncAPIClient):
 
 class AlphakekWithRawResponse:
     def __init__(self, client: Alphakek) -> None:
-        self.accounts = resources.AccountsResourceWithRawResponse(client.accounts)
+        self.account = resources.AccountResourceWithRawResponse(client.account)
         self.knowledge = resources.KnowledgeResourceWithRawResponse(client.knowledge)
         self.chats = resources.ChatsResourceWithRawResponse(client.chats)
 
 
 class AsyncAlphakekWithRawResponse:
     def __init__(self, client: AsyncAlphakek) -> None:
-        self.accounts = resources.AsyncAccountsResourceWithRawResponse(client.accounts)
+        self.account = resources.AsyncAccountResourceWithRawResponse(client.account)
         self.knowledge = resources.AsyncKnowledgeResourceWithRawResponse(client.knowledge)
         self.chats = resources.AsyncChatsResourceWithRawResponse(client.chats)
 
 
 class AlphakekWithStreamedResponse:
     def __init__(self, client: Alphakek) -> None:
-        self.accounts = resources.AccountsResourceWithStreamingResponse(client.accounts)
+        self.account = resources.AccountResourceWithStreamingResponse(client.account)
         self.knowledge = resources.KnowledgeResourceWithStreamingResponse(client.knowledge)
         self.chats = resources.ChatsResourceWithStreamingResponse(client.chats)
 
 
 class AsyncAlphakekWithStreamedResponse:
     def __init__(self, client: AsyncAlphakek) -> None:
-        self.accounts = resources.AsyncAccountsResourceWithStreamingResponse(client.accounts)
+        self.account = resources.AsyncAccountResourceWithStreamingResponse(client.account)
         self.knowledge = resources.AsyncKnowledgeResourceWithStreamingResponse(client.knowledge)
         self.chats = resources.AsyncChatsResourceWithStreamingResponse(client.chats)
 
