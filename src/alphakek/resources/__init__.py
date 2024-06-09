@@ -8,13 +8,13 @@ from .chats import (
     ChatsResourceWithStreamingResponse,
     AsyncChatsResourceWithStreamingResponse,
 )
-from .accounts import (
-    AccountsResource,
-    AsyncAccountsResource,
-    AccountsResourceWithRawResponse,
-    AsyncAccountsResourceWithRawResponse,
-    AccountsResourceWithStreamingResponse,
-    AsyncAccountsResourceWithStreamingResponse,
+from .account import (
+    AccountResource,
+    AsyncAccountResource,
+    AccountResourceWithRawResponse,
+    AsyncAccountResourceWithRawResponse,
+    AccountResourceWithStreamingResponse,
+    AsyncAccountResourceWithStreamingResponse,
 )
 from .knowledge import (
     KnowledgeResource,
@@ -26,12 +26,12 @@ from .knowledge import (
 )
 
 __all__ = [
-    "AccountsResource",
-    "AsyncAccountsResource",
-    "AccountsResourceWithRawResponse",
-    "AsyncAccountsResourceWithRawResponse",
-    "AccountsResourceWithStreamingResponse",
-    "AsyncAccountsResourceWithStreamingResponse",
+    "AccountResource",
+    "AsyncAccountResource",
+    "AccountResourceWithRawResponse",
+    "AsyncAccountResourceWithRawResponse",
+    "AccountResourceWithStreamingResponse",
+    "AsyncAccountResourceWithStreamingResponse",
     "KnowledgeResource",
     "AsyncKnowledgeResource",
     "KnowledgeResourceWithRawResponse",

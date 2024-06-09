@@ -1,4 +1,4 @@
-# Accounts
+# Account
 
 Types:
 
@@ -8,7 +8,7 @@ from alphakek.types import User
 
 Methods:
 
-- <code title="get /account">client.accounts.<a href="./src/alphakek/resources/accounts.py">retrieve</a>() -> <a href="./src/alphakek/types/user.py">User</a></code>
+- <code title="get /account">client.account.<a href="./src/alphakek/resources/account.py">info</a>() -> <a href="./src/alphakek/types/user.py">User</a></code>
 
 # Knowledge
 

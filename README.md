@@ -32,17 +32,25 @@ from alphakek import Alphakek
 
 client = Alphakek(
     # This is the default and can be omitted
-    bearer_token=os.environ.get("ALPHAKEK_BEARER_TOKEN"),
+    api_key=os.environ.get("ALPHA_API_TOKEN"),
 )
 
-user = client.accounts.retrieve()
-print(user.telegram_id)
+chat_completion = client.chats.completions(
+    messages=[
+        {
+            "role": "user",
+            "content": "What are the top holders stats for $AIKEK?",
+        }
+    ],
+    model="nexus",
+)
+print(chat_completion.choices_0.message.content)
 ```
 
-While you can provide a `bearer_token` keyword argument,
+While you can provide an `api_key` keyword argument,
 we recommend using [python-dotenv](https://pypi.org/project/python-dotenv/)
-to add `ALPHAKEK_BEARER_TOKEN="My Bearer Token"` to your `.env` file
-so that your Bearer Token is not stored in source control.
+to add `ALPHA_API_TOKEN="My API Key"` to your `.env` file
+so that your API Key is not stored in source control.
 
 ## Async usage
 
@@ -55,13 +63,21 @@ from alphakek import AsyncAlphakek
 
 client = AsyncAlphakek(
     # This is the default and can be omitted
-    bearer_token=os.environ.get("ALPHAKEK_BEARER_TOKEN"),
+    api_key=os.environ.get("ALPHA_API_TOKEN"),
 )
 
 
 async def main() -> None:
-    user = await client.accounts.retrieve()
-    print(user.telegram_id)
+    chat_completion = await client.chats.completions(
+        messages=[
+            {
+                "role": "user",
+                "content": "What are the top holders stats for $AIKEK?",
+            }
+        ],
+        model="nexus",
+    )
+    print(chat_completion.choices_0.message.content)
 
 
 asyncio.run(main())
@@ -94,7 +110,7 @@ from alphakek import Alphakek
 client = Alphakek()
 
 try:
-    client.accounts.retrieve()
+    client.account.info()
 except alphakek.APIConnectionError as e:
     print("The server could not be reached")
     print(e.__cause__)  # an underlying Exception, likely raised within httpx.
@@ -137,7 +153,7 @@ client = Alphakek(
 )
 
 # Or, configure per-request:
-client.with_options(max_retries=5).accounts.retrieve()
+client.with_options(max_retries=5).account.info()
 ```
 
 ### Timeouts
@@ -160,7 +176,7 @@ client = Alphakek(
 )
 
 # Override per-request:
-client.with_options(timeout=5.0).accounts.retrieve()
+client.with_options(timeout=5.0).account.info()
 ```
 
 On timeout, an `APITimeoutError` is thrown.
@@ -199,11 +215,11 @@ The "raw" Response object can be accessed by prefixing `.with_raw_response.` to 
 from alphakek import Alphakek
 
 client = Alphakek()
-response = client.accounts.with_raw_response.retrieve()
+response = client.account.with_raw_response.info()
 print(response.headers.get('X-My-Header'))
 
-account = response.parse()  # get the object that `accounts.retrieve()` would have returned
-print(account.telegram_id)
+account = response.parse()  # get the object that `account.info()` would have returned
+print(account.address)
 ```
 
 These methods return an [`APIResponse`](https://github.com/stainless-sdks/alphakek-python/tree/main/src/alphakek/_response.py) object.
@@ -217,7 +233,7 @@ The above interface eagerly reads the full response body when you make the reque
 To stream the response body, use `.with_streaming_response` instead, which requires a context manager and only reads the response body once you call `.read()`, `.text()`, `.json()`, `.iter_bytes()`, `.iter_text()`, `.iter_lines()` or `.parse()`. In the async client, these are async methods.
 
 ```python
-with client.accounts.with_streaming_response.retrieve() as response:
+with client.account.with_streaming_response.info() as response:
     print(response.headers.get("X-My-Header"))
 
     for line in response.iter_lines():
