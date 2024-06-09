@@ -27,9 +27,13 @@ pip install git+ssh://git@github.com/stainless-sdks/alphakek-python.git
 The full API of this library can be found in [api.md](api.md).
 
 ```python
+import os
 from alphakek import Alphakek
 
-client = Alphakek()
+client = Alphakek(
+    # This is the default and can be omitted
+    bearer_token=os.environ.get("ALPHAKEK_BEARER_TOKEN"),
+)
 
 user = client.accounts.retrieve()
 print(user.telegram_id)
@@ -45,10 +49,14 @@ so that your Bearer Token is not stored in source control.
 Simply import `AsyncAlphakek` instead of `Alphakek` and use `await` with each API call:
 
 ```python
+import os
 import asyncio
 from alphakek import AsyncAlphakek
 
-client = AsyncAlphakek()
+client = AsyncAlphakek(
+    # This is the default and can be omitted
+    bearer_token=os.environ.get("ALPHAKEK_BEARER_TOKEN"),
+)
 
 
 async def main() -> None:
