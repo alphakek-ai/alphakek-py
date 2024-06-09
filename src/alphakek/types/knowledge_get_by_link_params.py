@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing_extensions import Required, TypedDict
 
-__all__ = ["GetByLinkParams"]
+__all__ = ["KnowledgeGetByLinkParams"]
 
 
-class GetByLinkParams(TypedDict, total=False):
+class KnowledgeGetByLinkParams(TypedDict, total=False):
     link: Required[str]

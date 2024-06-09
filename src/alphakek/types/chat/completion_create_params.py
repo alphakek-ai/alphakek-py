@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Dict, Union, Iterable, Optional
 from typing_extensions import Literal, Required, TypedDict
 
-__all__ = ["ChatCompletionsParams", "Message"]
+__all__ = ["CompletionCreateParams", "Message"]
 
 
-class ChatCompletionsParams(TypedDict, total=False):
+class CompletionCreateParams(TypedDict, total=False):
     messages: Required[Iterable[Message]]
 
     model: Required[Literal["versa", "nexus", "eclipse"]]
