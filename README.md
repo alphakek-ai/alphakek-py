@@ -32,16 +32,10 @@ client = Alphakek(
     api_key=os.environ.get("ALPHA_API_TOKEN"),
 )
 
-completion_create_response = client.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "What are the top holders stats for $AIKEK?",
-        }
-    ],
-    model="nexus",
+knowledge_ask_response = client.knowledge.ask(
+    question="What are the top holders stats for $AIKEK?",
 )
-print(completion_create_response.choices)
+print(knowledge_ask_response.answer)
 ```
 
 While you can provide an `api_key` keyword argument,
@@ -65,16 +59,10 @@ client = AsyncAlphakek(
 
 
 async def main() -> None:
-    completion_create_response = await client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": "What are the top holders stats for $AIKEK?",
-            }
-        ],
-        model="nexus",
+    knowledge_ask_response = await client.knowledge.ask(
+        question="What are the top holders stats for $AIKEK?",
     )
-    print(completion_create_response.choices)
+    print(knowledge_ask_response.answer)
 
 
 asyncio.run(main())
@@ -90,6 +78,25 @@ Nested request parameters are [TypedDicts](https://docs.python.org/3/library/typ
 - Converting to a dictionary, `model.to_dict()`
 
 Typed requests and responses provide autocomplete and documentation within your editor. If you would like to see type errors in VS Code to help catch bugs earlier, set `python.analysis.typeCheckingMode` to `basic`.
+
+## File uploads
+
+Request parameters that correspond to file uploads can be passed as `bytes`, a [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) instance or a tuple of `(filename, contents, media type)`.
+
+```python
+from pathlib import Path
+from alphakek import Alphakek
+
+client = Alphakek()
+
+client.visuals.apply_effect(
+    image=b"raw file contents",
+    prompt="cyberpunk style 8bit",
+    allow_nsfw=False,
+)
+```
+
+The async client uses the exact same interface. If you pass a [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) instance, the file contents will be read asynchronously automatically.
 
 ## Handling errors
 

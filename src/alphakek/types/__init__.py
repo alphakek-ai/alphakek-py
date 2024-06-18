@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from .user import User as User
+from .knowledge_ask_params import KnowledgeAskParams as KnowledgeAskParams
+from .knowledge_ask_response import KnowledgeAskResponse as KnowledgeAskResponse
 from .knowledge_document_view import KnowledgeDocumentView as KnowledgeDocumentView
 from .knowledge_search_params import KnowledgeSearchParams as KnowledgeSearchParams
 from .knowledge_search_response import KnowledgeSearchResponse as KnowledgeSearchResponse
