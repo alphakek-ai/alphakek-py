@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 from typing_extensions import Literal
 
 import httpx
@@ -24,7 +24,7 @@ from ...types.chat import completion_create_params
 from ..._base_client import (
     make_request_options,
 )
-from ...types.chat.chat_completion import ChatCompletion
+from ...types.chat.completion_create_response import CompletionCreateResponse
 
 __all__ = ["CompletionsResource", "AsyncCompletionsResource"]
 
@@ -51,7 +51,7 @@ class CompletionsResource(SyncAPIResource):
         extra_query: Query | None = None,
         extra_body: Body | None = None,
         timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
-    ) -> ChatCompletion:
+    ) -> CompletionCreateResponse:
         """
         Chat Completions
 
@@ -64,21 +64,26 @@ class CompletionsResource(SyncAPIResource):
 
           timeout: Override the client-level default timeout for this request, in seconds
         """
-        return self._post(
-            "/v1/chat/completions",
-            body=maybe_transform(
-                {
-                    "messages": messages,
-                    "model": model,
-                    "persona": persona,
-                    "stream": stream,
-                },
-                completion_create_params.CompletionCreateParams,
+        return cast(
+            CompletionCreateResponse,
+            self._post(
+                "/v1/chat/completions",
+                body=maybe_transform(
+                    {
+                        "messages": messages,
+                        "model": model,
+                        "persona": persona,
+                        "stream": stream,
+                    },
+                    completion_create_params.CompletionCreateParams,
+                ),
+                options=make_request_options(
+                    extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
+                ),
+                cast_to=cast(
+                    Any, CompletionCreateResponse
+                ),  # Union types cannot be passed in as arguments in the type system
             ),
-            options=make_request_options(
-                extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
-            ),
-            cast_to=ChatCompletion,
         )
 
 
@@ -104,7 +109,7 @@ class AsyncCompletionsResource(AsyncAPIResource):
         extra_query: Query | None = None,
         extra_body: Body | None = None,
         timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
-    ) -> ChatCompletion:
+    ) -> CompletionCreateResponse:
         """
         Chat Completions
 
@@ -117,21 +122,26 @@ class AsyncCompletionsResource(AsyncAPIResource):
 
           timeout: Override the client-level default timeout for this request, in seconds
         """
-        return await self._post(
-            "/v1/chat/completions",
-            body=await async_maybe_transform(
-                {
-                    "messages": messages,
-                    "model": model,
-                    "persona": persona,
-                    "stream": stream,
-                },
-                completion_create_params.CompletionCreateParams,
+        return cast(
+            CompletionCreateResponse,
+            await self._post(
+                "/v1/chat/completions",
+                body=await async_maybe_transform(
+                    {
+                        "messages": messages,
+                        "model": model,
+                        "persona": persona,
+                        "stream": stream,
+                    },
+                    completion_create_params.CompletionCreateParams,
+                ),
+                options=make_request_options(
+                    extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
+                ),
+                cast_to=cast(
+                    Any, CompletionCreateResponse
+                ),  # Union types cannot be passed in as arguments in the type system
             ),
-            options=make_request_options(
-                extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
-            ),
-            cast_to=ChatCompletion,
         )
 
 
