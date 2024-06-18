@@ -48,7 +48,6 @@ __all__ = [
 class Alphakek(SyncAPIClient):
     account: resources.AccountResource
     knowledge: resources.KnowledgeResource
-    chat: resources.ChatResource
     visuals: resources.VisualsResource
     with_raw_response: AlphakekWithRawResponse
     with_streaming_response: AlphakekWithStreamedResponse
@@ -109,7 +108,6 @@ class Alphakek(SyncAPIClient):
 
         self.account = resources.AccountResource(self)
         self.knowledge = resources.KnowledgeResource(self)
-        self.chat = resources.ChatResource(self)
         self.visuals = resources.VisualsResource(self)
         self.with_raw_response = AlphakekWithRawResponse(self)
         self.with_streaming_response = AlphakekWithStreamedResponse(self)
@@ -222,7 +220,6 @@ class Alphakek(SyncAPIClient):
 class AsyncAlphakek(AsyncAPIClient):
     account: resources.AsyncAccountResource
     knowledge: resources.AsyncKnowledgeResource
-    chat: resources.AsyncChatResource
     visuals: resources.AsyncVisualsResource
     with_raw_response: AsyncAlphakekWithRawResponse
     with_streaming_response: AsyncAlphakekWithStreamedResponse
@@ -283,7 +280,6 @@ class AsyncAlphakek(AsyncAPIClient):
 
         self.account = resources.AsyncAccountResource(self)
         self.knowledge = resources.AsyncKnowledgeResource(self)
-        self.chat = resources.AsyncChatResource(self)
         self.visuals = resources.AsyncVisualsResource(self)
         self.with_raw_response = AsyncAlphakekWithRawResponse(self)
         self.with_streaming_response = AsyncAlphakekWithStreamedResponse(self)
@@ -397,7 +393,6 @@ class AlphakekWithRawResponse:
     def __init__(self, client: Alphakek) -> None:
         self.account = resources.AccountResourceWithRawResponse(client.account)
         self.knowledge = resources.KnowledgeResourceWithRawResponse(client.knowledge)
-        self.chat = resources.ChatResourceWithRawResponse(client.chat)
         self.visuals = resources.VisualsResourceWithRawResponse(client.visuals)
 
 
@@ -405,7 +400,6 @@ class AsyncAlphakekWithRawResponse:
     def __init__(self, client: AsyncAlphakek) -> None:
         self.account = resources.AsyncAccountResourceWithRawResponse(client.account)
         self.knowledge = resources.AsyncKnowledgeResourceWithRawResponse(client.knowledge)
-        self.chat = resources.AsyncChatResourceWithRawResponse(client.chat)
         self.visuals = resources.AsyncVisualsResourceWithRawResponse(client.visuals)
 
 
@@ -413,7 +407,6 @@ class AlphakekWithStreamedResponse:
     def __init__(self, client: Alphakek) -> None:
         self.account = resources.AccountResourceWithStreamingResponse(client.account)
         self.knowledge = resources.KnowledgeResourceWithStreamingResponse(client.knowledge)
-        self.chat = resources.ChatResourceWithStreamingResponse(client.chat)
         self.visuals = resources.VisualsResourceWithStreamingResponse(client.visuals)
 
 
@@ -421,7 +414,6 @@ class AsyncAlphakekWithStreamedResponse:
     def __init__(self, client: AsyncAlphakek) -> None:
         self.account = resources.AsyncAccountResourceWithStreamingResponse(client.account)
         self.knowledge = resources.AsyncKnowledgeResourceWithStreamingResponse(client.knowledge)
-        self.chat = resources.AsyncChatResourceWithStreamingResponse(client.chat)
         self.visuals = resources.AsyncVisualsResourceWithStreamingResponse(client.visuals)
 
 
