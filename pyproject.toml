@@ -5,7 +5,7 @@ description = "The official Python library for the alphakek API"
 dynamic = ["readme"]
 license = "Apache-2.0"
 authors = [
-{ name = "Alphakek", email = "dev-feedback@alphakek.com" },
+{ name = "Alphakek", email = "contact@alphakek.com" },
 ]
 dependencies = [
     "httpx>=0.23.0, <1",
