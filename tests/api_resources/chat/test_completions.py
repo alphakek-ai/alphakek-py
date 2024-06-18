@@ -9,17 +9,17 @@ import pytest
 
 from alphakek import Alphakek, AsyncAlphakek
 from tests.utils import assert_matches_type
-from alphakek.types.chat import ChatCompletion
+from alphakek.types.chat import CompletionCreateResponse
 
 base_url = os.environ.get("TEST_API_BASE_URL", "http://127.0.0.1:4010")
 
 
-class TestCompletion:
+class TestCompletions:
     parametrize = pytest.mark.parametrize("client", [False, True], indirect=True, ids=["loose", "strict"])
 
     @parametrize
     def test_method_create(self, client: Alphakek) -> None:
-        completion = client.chat.completion.create(
+        completion = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
@@ -36,11 +36,11 @@ class TestCompletion:
             ],
             model="versa",
         )
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     def test_method_create_with_all_params(self, client: Alphakek) -> None:
-        completion = client.chat.completion.create(
+        completion = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
@@ -59,11 +59,11 @@ class TestCompletion:
             persona="string",
             stream=True,
         )
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     def test_raw_response_create(self, client: Alphakek) -> None:
-        response = client.chat.completion.with_raw_response.create(
+        response = client.chat.completions.with_raw_response.create(
             messages=[
                 {
                     "role": "system",
@@ -84,11 +84,11 @@ class TestCompletion:
         assert response.is_closed is True
         assert response.http_request.headers.get("X-Stainless-Lang") == "python"
         completion = response.parse()
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     def test_streaming_response_create(self, client: Alphakek) -> None:
-        with client.chat.completion.with_streaming_response.create(
+        with client.chat.completions.with_streaming_response.create(
             messages=[
                 {
                     "role": "system",
@@ -109,17 +109,17 @@ class TestCompletion:
             assert response.http_request.headers.get("X-Stainless-Lang") == "python"
 
             completion = response.parse()
-            assert_matches_type(ChatCompletion, completion, path=["response"])
+            assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
         assert cast(Any, response.is_closed) is True
 
 
-class TestAsyncCompletion:
+class TestAsyncCompletions:
     parametrize = pytest.mark.parametrize("async_client", [False, True], indirect=True, ids=["loose", "strict"])
 
     @parametrize
     async def test_method_create(self, async_client: AsyncAlphakek) -> None:
-        completion = await async_client.chat.completion.create(
+        completion = await async_client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
@@ -136,11 +136,11 @@ class TestAsyncCompletion:
             ],
             model="versa",
         )
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     async def test_method_create_with_all_params(self, async_client: AsyncAlphakek) -> None:
-        completion = await async_client.chat.completion.create(
+        completion = await async_client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
@@ -159,11 +159,11 @@ class TestAsyncCompletion:
             persona="string",
             stream=True,
         )
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     async def test_raw_response_create(self, async_client: AsyncAlphakek) -> None:
-        response = await async_client.chat.completion.with_raw_response.create(
+        response = await async_client.chat.completions.with_raw_response.create(
             messages=[
                 {
                     "role": "system",
@@ -184,11 +184,11 @@ class TestAsyncCompletion:
         assert response.is_closed is True
         assert response.http_request.headers.get("X-Stainless-Lang") == "python"
         completion = await response.parse()
-        assert_matches_type(ChatCompletion, completion, path=["response"])
+        assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
     @parametrize
     async def test_streaming_response_create(self, async_client: AsyncAlphakek) -> None:
-        async with async_client.chat.completion.with_streaming_response.create(
+        async with async_client.chat.completions.with_streaming_response.create(
             messages=[
                 {
                     "role": "system",
@@ -209,6 +209,6 @@ class TestAsyncCompletion:
             assert response.http_request.headers.get("X-Stainless-Lang") == "python"
 
             completion = await response.parse()
-            assert_matches_type(ChatCompletion, completion, path=["response"])
+            assert_matches_type(CompletionCreateResponse, completion, path=["response"])
 
         assert cast(Any, response.is_closed) is True

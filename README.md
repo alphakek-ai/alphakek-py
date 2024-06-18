@@ -32,7 +32,7 @@ client = Alphakek(
     api_key=os.environ.get("ALPHA_API_TOKEN"),
 )
 
-chat_completion = client.chat.completion.create(
+completion_create_response = client.chat.completions.create(
     messages=[
         {
             "role": "user",
@@ -41,7 +41,7 @@ chat_completion = client.chat.completion.create(
     ],
     model="nexus",
 )
-print(chat_completion.choices)
+print(completion_create_response.choices)
 ```
 
 While you can provide an `api_key` keyword argument,
@@ -65,7 +65,7 @@ client = AsyncAlphakek(
 
 
 async def main() -> None:
-    chat_completion = await client.chat.completion.create(
+    completion_create_response = await client.chat.completions.create(
         messages=[
             {
                 "role": "user",
@@ -74,7 +74,7 @@ async def main() -> None:
         ],
         model="nexus",
     )
-    print(chat_completion.choices)
+    print(completion_create_response.choices)
 
 
 asyncio.run(main())
