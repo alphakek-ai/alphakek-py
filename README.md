@@ -32,7 +32,7 @@ client = Alphakek(
     api_key=os.environ.get("ALPHA_API_TOKEN"),
 )
 
-chat_completion = client.chat.completion.create(
+chat_completion = client.chat.completions.create(
     messages=[
         {
             "role": "user",
@@ -65,7 +65,7 @@ client = AsyncAlphakek(
 
 
 async def main() -> None:
-    chat_completion = await client.chat.completion.create(
+    chat_completion = await client.chat.completions.create(
         messages=[
             {
                 "role": "user",

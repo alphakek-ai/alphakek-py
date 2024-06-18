@@ -25,7 +25,7 @@ Methods:
 
 # Chat
 
-## Completion
+## Completions
 
 Types:
 
@@ -35,7 +35,7 @@ from alphakek.types.chat import ChatCompletion
 
 Methods:
 
-- <code title="post /v1/chat/completions">client.chat.completion.<a href="./src/alphakek/resources/chat/completion.py">create</a>(\*\*<a href="src/alphakek/types/chat/completion_create_params.py">params</a>) -> <a href="./src/alphakek/types/chat/chat_completion.py">ChatCompletion</a></code>
+- <code title="post /v1/chat/completions">client.chat.completions.<a href="./src/alphakek/resources/chat/completions.py">create</a>(\*\*<a href="src/alphakek/types/chat/completion_create_params.py">params</a>) -> <a href="./src/alphakek/types/chat/chat_completion.py">ChatCompletion</a></code>
 
 # Visuals
 

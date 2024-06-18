@@ -8,22 +8,22 @@ from .chat import (
     ChatResourceWithStreamingResponse,
     AsyncChatResourceWithStreamingResponse,
 )
-from .completion import (
-    CompletionResource,
-    AsyncCompletionResource,
-    CompletionResourceWithRawResponse,
-    AsyncCompletionResourceWithRawResponse,
-    CompletionResourceWithStreamingResponse,
-    AsyncCompletionResourceWithStreamingResponse,
+from .completions import (
+    CompletionsResource,
+    AsyncCompletionsResource,
+    CompletionsResourceWithRawResponse,
+    AsyncCompletionsResourceWithRawResponse,
+    CompletionsResourceWithStreamingResponse,
+    AsyncCompletionsResourceWithStreamingResponse,
 )
 
 __all__ = [
-    "CompletionResource",
-    "AsyncCompletionResource",
-    "CompletionResourceWithRawResponse",
-    "AsyncCompletionResourceWithRawResponse",
-    "CompletionResourceWithStreamingResponse",
-    "AsyncCompletionResourceWithStreamingResponse",
+    "CompletionsResource",
+    "AsyncCompletionsResource",
+    "CompletionsResourceWithRawResponse",
+    "AsyncCompletionsResourceWithRawResponse",
+    "CompletionsResourceWithStreamingResponse",
+    "AsyncCompletionsResourceWithStreamingResponse",
     "ChatResource",
     "AsyncChatResource",
     "ChatResourceWithRawResponse",
