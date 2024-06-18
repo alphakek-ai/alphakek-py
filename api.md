@@ -24,20 +24,6 @@ Methods:
 - <code title="get /knowledge/get/by_link">client.knowledge.<a href="./src/alphakek/resources/knowledge.py">get_by_link</a>(\*\*<a href="src/alphakek/types/knowledge_get_by_link_params.py">params</a>) -> <a href="./src/alphakek/types/knowledge_document_view.py">KnowledgeDocumentView</a></code>
 - <code title="post /knowledge/search">client.knowledge.<a href="./src/alphakek/resources/knowledge.py">search</a>(\*\*<a href="src/alphakek/types/knowledge_search_params.py">params</a>) -> <a href="./src/alphakek/types/knowledge_search_response.py">KnowledgeSearchResponse</a></code>
 
-# Chat
-
-## Completions
-
-Types:
-
-```python
-from alphakek.types.chat import ChatCompletion, CompletionCreateResponse
-```
-
-Methods:
-
-- <code title="post /v1/chat/completions">client.chat.completions.<a href="./src/alphakek/resources/chat/completions.py">create</a>(\*\*<a href="src/alphakek/types/chat/completion_create_params.py">params</a>) -> <a href="./src/alphakek/types/chat/completion_create_response.py">CompletionCreateResponse</a></code>
-
 # Visuals
 
 Methods:
