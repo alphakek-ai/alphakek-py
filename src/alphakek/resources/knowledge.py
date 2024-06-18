@@ -7,7 +7,7 @@ from typing_extensions import Literal
 
 import httpx
 
-from ..types import knowledge_search_params, knowledge_get_by_link_params
+from ..types import knowledge_ask_params, knowledge_search_params, knowledge_get_by_link_params
 from .._types import NOT_GIVEN, Body, Query, Headers, NotGiven
 from .._utils import (
     maybe_transform,
@@ -24,6 +24,7 @@ from .._response import (
 from .._base_client import (
     make_request_options,
 )
+from ..types.knowledge_ask_response import KnowledgeAskResponse
 from ..types.knowledge_document_view import KnowledgeDocumentView
 from ..types.knowledge_search_response import KnowledgeSearchResponse
 
@@ -38,6 +39,38 @@ class KnowledgeResource(SyncAPIResource):
     @cached_property
     def with_streaming_response(self) -> KnowledgeResourceWithStreamingResponse:
         return KnowledgeResourceWithStreamingResponse(self)
+
+    def ask(
+        self,
+        *,
+        question: str,
+        # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
+        # The extra values given here take precedence over values defined on the client or passed to this method.
+        extra_headers: Headers | None = None,
+        extra_query: Query | None = None,
+        extra_body: Body | None = None,
+        timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
+    ) -> KnowledgeAskResponse:
+        """
+        Ask knowledge
+
+        Args:
+          extra_headers: Send extra headers
+
+          extra_query: Add additional query parameters to the request
+
+          extra_body: Add additional JSON properties to the request
+
+          timeout: Override the client-level default timeout for this request, in seconds
+        """
+        return self._post(
+            "/knowledge/ask",
+            body=maybe_transform({"question": question}, knowledge_ask_params.KnowledgeAskParams),
+            options=make_request_options(
+                extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
+            ),
+            cast_to=KnowledgeAskResponse,
+        )
 
     def get_by_link(
         self,
@@ -129,6 +162,38 @@ class AsyncKnowledgeResource(AsyncAPIResource):
     def with_streaming_response(self) -> AsyncKnowledgeResourceWithStreamingResponse:
         return AsyncKnowledgeResourceWithStreamingResponse(self)
 
+    async def ask(
+        self,
+        *,
+        question: str,
+        # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
+        # The extra values given here take precedence over values defined on the client or passed to this method.
+        extra_headers: Headers | None = None,
+        extra_query: Query | None = None,
+        extra_body: Body | None = None,
+        timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
+    ) -> KnowledgeAskResponse:
+        """
+        Ask knowledge
+
+        Args:
+          extra_headers: Send extra headers
+
+          extra_query: Add additional query parameters to the request
+
+          extra_body: Add additional JSON properties to the request
+
+          timeout: Override the client-level default timeout for this request, in seconds
+        """
+        return await self._post(
+            "/knowledge/ask",
+            body=await async_maybe_transform({"question": question}, knowledge_ask_params.KnowledgeAskParams),
+            options=make_request_options(
+                extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
+            ),
+            cast_to=KnowledgeAskResponse,
+        )
+
     async def get_by_link(
         self,
         *,
@@ -216,6 +281,9 @@ class KnowledgeResourceWithRawResponse:
     def __init__(self, knowledge: KnowledgeResource) -> None:
         self._knowledge = knowledge
 
+        self.ask = to_raw_response_wrapper(
+            knowledge.ask,
+        )
         self.get_by_link = to_raw_response_wrapper(
             knowledge.get_by_link,
         )
@@ -228,6 +296,9 @@ class AsyncKnowledgeResourceWithRawResponse:
     def __init__(self, knowledge: AsyncKnowledgeResource) -> None:
         self._knowledge = knowledge
 
+        self.ask = async_to_raw_response_wrapper(
+            knowledge.ask,
+        )
         self.get_by_link = async_to_raw_response_wrapper(
             knowledge.get_by_link,
         )
@@ -240,6 +311,9 @@ class KnowledgeResourceWithStreamingResponse:
     def __init__(self, knowledge: KnowledgeResource) -> None:
         self._knowledge = knowledge
 
+        self.ask = to_streamed_response_wrapper(
+            knowledge.ask,
+        )
         self.get_by_link = to_streamed_response_wrapper(
             knowledge.get_by_link,
         )
@@ -252,6 +326,9 @@ class AsyncKnowledgeResourceWithStreamingResponse:
     def __init__(self, knowledge: AsyncKnowledgeResource) -> None:
         self._knowledge = knowledge
 
+        self.ask = async_to_streamed_response_wrapper(
+            knowledge.ask,
+        )
         self.get_by_link = async_to_streamed_response_wrapper(
             knowledge.get_by_link,
         )
