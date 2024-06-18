@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.3 (2024-06-18)
+
+Full Changelog: [v0.1.0-alpha.2...v0.1.0-alpha.3](https://github.com/alphakek-ai/alphakek-py/compare/v0.1.0-alpha.2...v0.1.0-alpha.3)
+
+### Features
+
+* **api:** update via SDK Studio ([#7](https://github.com/alphakek-ai/alphakek-py/issues/7)) ([42f440b](https://github.com/alphakek-ai/alphakek-py/commit/42f440b9c52fce404a02939c3ac817b038539dbf))
+
 ## 0.1.0-alpha.2 (2024-06-18)
 
 Full Changelog: [v0.1.0-alpha.1...v0.1.0-alpha.2](https://github.com/alphakek-ai/alphakek-py/compare/v0.1.0-alpha.1...v0.1.0-alpha.2)
