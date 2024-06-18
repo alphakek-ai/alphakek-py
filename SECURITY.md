@@ -20,7 +20,7 @@ or products provided by Alphakek please follow the respective company's security
 
 ### Alphakek Terms and Policies
 
-Please contact dev-feedback@alphakek.com for any questions or concerns regarding security of our services.
+Please contact contact@alphakek.com for any questions or concerns regarding security of our services.
 
 ---
 
