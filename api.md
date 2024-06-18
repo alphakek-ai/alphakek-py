@@ -36,3 +36,11 @@ from alphakek.types.chat import ChatCompletion
 Methods:
 
 - <code title="post /v1/chat/completions">client.chat.completion.<a href="./src/alphakek/resources/chat/completion.py">create</a>(\*\*<a href="src/alphakek/types/chat/completion_create_params.py">params</a>) -> <a href="./src/alphakek/types/chat/chat_completion.py">ChatCompletion</a></code>
+
+# Visuals
+
+Methods:
+
+- <code title="post /visuals/apply_effect">client.visuals.<a href="./src/alphakek/resources/visuals.py">apply_effect</a>(\*\*<a href="src/alphakek/types/visual_apply_effect_params.py">params</a>) -> BinaryAPIResponse</code>
+- <code title="post /visuals/apply_mirage">client.visuals.<a href="./src/alphakek/resources/visuals.py">apply_mirage</a>(\*\*<a href="src/alphakek/types/visual_apply_mirage_params.py">params</a>) -> BinaryAPIResponse</code>
+- <code title="post /visuals/create_image">client.visuals.<a href="./src/alphakek/resources/visuals.py">create_image</a>(\*\*<a href="src/alphakek/types/visual_create_image_params.py">params</a>) -> BinaryAPIResponse</code>
