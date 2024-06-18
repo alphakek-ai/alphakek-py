@@ -15,12 +15,9 @@ The REST API documentation can be found [on docs.alphakek.com](https://docs.alph
 ## Installation
 
 ```sh
-# install from the production repo
-pip install git+ssh://git@github.com/alphakek-ai/alphakek-py.git
+# install from PyPI
+pip install --pre alphakek
 ```
-
-> [!NOTE]
-> Once this package is [published to PyPI](https://app.stainlessapi.com/docs/guides/publish), this will become: `pip install --pre alphakek`
 
 ## Usage
 
