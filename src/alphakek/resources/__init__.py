@@ -16,6 +16,14 @@ from .account import (
     AccountResourceWithStreamingResponse,
     AsyncAccountResourceWithStreamingResponse,
 )
+from .visuals import (
+    VisualsResource,
+    AsyncVisualsResource,
+    VisualsResourceWithRawResponse,
+    AsyncVisualsResourceWithRawResponse,
+    VisualsResourceWithStreamingResponse,
+    AsyncVisualsResourceWithStreamingResponse,
+)
 from .knowledge import (
     KnowledgeResource,
     AsyncKnowledgeResource,
@@ -44,4 +52,10 @@ __all__ = [
     "AsyncChatResourceWithRawResponse",
     "ChatResourceWithStreamingResponse",
     "AsyncChatResourceWithStreamingResponse",
+    "VisualsResource",
+    "AsyncVisualsResource",
+    "VisualsResourceWithRawResponse",
+    "AsyncVisualsResourceWithRawResponse",
+    "VisualsResourceWithStreamingResponse",
+    "AsyncVisualsResourceWithStreamingResponse",
 ]
