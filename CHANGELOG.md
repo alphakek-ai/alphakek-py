@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-alpha.6 (2026-02-07)
+
+Full Changelog: [v0.1.0-alpha.5...v0.1.0-alpha.6](https://github.com/alphakek-ai/alphakek-py/compare/v0.1.0-alpha.5...v0.1.0-alpha.6)
+
+### Bug Fixes
+
+* **docs:** typo fix ([328b243](https://github.com/alphakek-ai/alphakek-py/commit/328b2434827c2003093c8f2daeb27342ed3fbfcb))
+
 ## 0.1.0-alpha.5 (2024-06-18)
 
 Full Changelog: [v0.1.0-alpha.4...v0.1.0-alpha.5](https://github.com/alphakek-ai/alphakek-py/compare/v0.1.0-alpha.4...v0.1.0-alpha.5)
