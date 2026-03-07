@@ -1,4 +1,4 @@
-"""Submission commands: create."""
+"""Submission commands: next-challenge, create."""
 
 from __future__ import annotations
 
@@ -11,6 +11,34 @@ import httpx
 import typer
 
 app = typer.Typer(no_args_is_help=True)
+
+
+@app.command("next-challenge")
+def next_challenge(
+    ctx: typer.Context,
+    bench: Annotated[str | None, typer.Option("--bench", help="Filter to a specific bench address.")] = None,
+) -> None:
+    """Fetch the next available challenge.
+
+    Returns the challenge JSON (id, title, research_context, etc.) or
+    null with exit code 1 if no challenge is available.
+    """
+    from alphakek.cli.main import _error, _make_client, _output
+
+    client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
+
+    try:
+        challenge = client.submission.next_challenge(bench=bench)
+    except httpx.HTTPStatusError as e:
+        _error(f"Failed to fetch challenge: {e.response.text}")
+    except httpx.RequestError as e:
+        _error(f"Network error: {e}")
+
+    if challenge is None:
+        typer.echo("null")
+        raise typer.Exit(code=1)
+
+    _output(challenge)
 
 
 @app.command()

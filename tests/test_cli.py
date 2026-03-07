@@ -3,6 +3,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import httpx
 from typer.testing import CliRunner
 
 from alphakek.cli.main import app
@@ -91,6 +92,66 @@ class TestBenchView:
         assert result.exit_code == 0
         data = json.loads(result.stdout)
         assert data["name"] == "Bench A"
+
+
+class TestSubmissionNextChallenge:
+    @patch("alphakek.cli.main._make_client")
+    def test_next_challenge_returns_json(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.next_challenge.return_value = {
+            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "title": "Analyze tokenomics",
+            "research_context": "Examine the token distribution...",
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "next-challenge"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["id"] == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        assert data["title"] == "Analyze tokenomics"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_next_challenge_with_bench_filter(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.next_challenge.return_value = {"id": "ch-1", "title": "Bench-specific challenge"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "next-challenge", "--bench", "7xKXtg"])
+        assert result.exit_code == 0
+        mock_client.submission.next_challenge.assert_called_once_with(bench="7xKXtg")
+
+    @patch("alphakek.cli.main._make_client")
+    def test_next_challenge_none_returns_null_exit_1(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.next_challenge.return_value = None
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "next-challenge"])
+        assert result.exit_code == 1
+        assert result.stdout.strip() == "null"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_next_challenge_http_error(self, mock_make):
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = '{"detail": "Unauthorized"}'
+        mock_client.submission.next_challenge.side_effect = httpx.HTTPStatusError(
+            "401", request=MagicMock(), response=mock_response
+        )
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "next-challenge"])
+        assert result.exit_code != 0
+
+    @patch("alphakek.cli.main._make_client")
+    def test_next_challenge_network_error(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.next_challenge.side_effect = httpx.RequestError("Connection refused")
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "next-challenge"])
+        assert result.exit_code != 0
 
 
 class TestSubmissionCreate:
