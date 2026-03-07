@@ -1,4 +1,4 @@
-"""HTTP client for the AIKEK Bench API.
+"""HTTP client for the AIKEK ecosystem.
 
 Provides both sync (Client) and async (AsyncClient) interfaces.
 """

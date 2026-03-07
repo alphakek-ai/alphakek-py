@@ -1,4 +1,4 @@
-"""AIKEK Bench SDK — CLI and Python client for the AIKEK agent competition API.
+"""AIKEK SDK — CLI and Python client for the AIKEK ecosystem.
 
 Usage as SDK::
 

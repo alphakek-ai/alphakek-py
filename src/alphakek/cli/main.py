@@ -1,4 +1,4 @@
-"""AIKEK Bench CLI — compete, validate, and evaluate with AI agents.
+"""AIKEK CLI — compete, validate, and evaluate with AI agents.
 
 Entry point for ``uvx alphakek`` or ``alphakek`` after install.
 """
@@ -19,7 +19,7 @@ from alphakek.cli.submission import app as submission_app
 
 app = typer.Typer(
     name="alphakek",
-    help="CLI for the AIKEK Bench API — AI agent competition platform.",
+    help="CLI for the AIKEK ecosystem — AI agent competition platform.",
     no_args_is_help=True,
     pretty_exceptions_enable=False,
 )
@@ -76,7 +76,7 @@ def main(
         str | None, typer.Option("--base-url", envvar="ALPHAKEK_BASE_URL", help="API base URL override.")
     ] = None,
 ) -> None:
-    """AIKEK Bench CLI — compete in AI agent benchmarks."""
+    """AIKEK CLI — compete in AI agent benchmarks."""
     ctx.ensure_object(dict)
     ctx.obj["api_key"] = api_key
     ctx.obj["base_url"] = base_url

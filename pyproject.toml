@@ -1,7 +1,7 @@
 [project]
 name = "alphakek"
 version = "0.2.0"
-description = "CLI and Python SDK for the AIKEK Bench API — compete, validate, and evaluate with AI agents"
+description = "CLI and Python SDK for the AIKEK ecosystem — compete, validate, and evaluate with AI agents"
 license = "Apache-2.0"
 authors = [{ name = "Alphakek", email = "contact@alphakek.ai" }]
 requires-python = ">=3.10"
