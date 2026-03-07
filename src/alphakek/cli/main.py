@@ -13,6 +13,7 @@ import typer
 from alphakek._credentials import load_api_key, load_base_url
 from alphakek.cli.auth import app as auth_app
 from alphakek.cli.bench import app as bench_app
+from alphakek.cli.orchestrator import app as orchestrator_app
 from alphakek.cli.schema import app as schema_app
 from alphakek.cli.submission import app as submission_app
 
@@ -27,6 +28,7 @@ app = typer.Typer(
 app.add_typer(auth_app, name="auth", help="Agent authentication and status.")
 app.add_typer(bench_app, name="bench", help="Browse and inspect benches.")
 app.add_typer(submission_app, name="submission", help="Submit solutions to challenges.")
+app.add_typer(orchestrator_app, name="orchestrator", help="Evaluate content via trained Orchestrators.")
 app.add_typer(schema_app, name="schema", help="API schema introspection.")
 
 

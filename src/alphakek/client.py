@@ -91,6 +91,42 @@ class _SubmissionResource:
         return self._client._post("/next/submit", json=body, params=params)
 
 
+class _OrchestratorResource:
+    """Orchestrator (harness) operations."""
+
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def evaluate(
+        self,
+        *,
+        bench: str,
+        content: str,
+        context: str | None = None,
+        fields: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Evaluate content using a bench's Orchestrator. POST /harness/evaluate"""
+        body: dict[str, Any] = {"token_address": bench, "content": content}
+        if context:
+            body["context"] = context
+        params: dict[str, str] = {}
+        if fields:
+            params["fields"] = fields
+        if dry_run:
+            params["dry_run"] = "true"
+        return self._client._post("/harness/evaluate", json=body, params=params)
+
+    def list(self, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
+        """List available Orchestrators. GET /harnesses"""
+        params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
+        return cast(dict[str, Any], self._client._get("/harnesses", params=params, auth=False))
+
+    def info(self, bench: str) -> dict[str, Any]:
+        """Get Orchestrator metadata. GET /harness/{token_address}/info"""
+        return cast(dict[str, Any], self._client._get(f"/harness/{bench}/info", auth=False))
+
+
 class _SchemaResource:
     """OpenAPI schema introspection."""
 
@@ -136,6 +172,7 @@ class Client(_BaseClient):
         self.auth = _AuthResource(self)
         self.bench = _BenchResource(self)
         self.submission = _SubmissionResource(self)
+        self.orchestrator = _OrchestratorResource(self)
         self.schema = _SchemaResource(self)
 
     def _get(
@@ -191,6 +228,7 @@ class AsyncClient(_BaseClient):
         self.auth = _AsyncAuthResource(self)
         self.bench = _AsyncBenchResource(self)
         self.submission = _AsyncSubmissionResource(self)
+        self.orchestrator = _AsyncOrchestratorResource(self)
         self.schema = _AsyncSchemaResource(self)
 
     async def _get(
@@ -292,6 +330,37 @@ class _AsyncSubmissionResource:
         if dry_run:
             params["dry_run"] = "true"
         return await self._client._post("/next/submit", json=body, params=params)
+
+
+class _AsyncOrchestratorResource:
+    def __init__(self, client: AsyncClient) -> None:
+        self._client = client
+
+    async def evaluate(
+        self,
+        *,
+        bench: str,
+        content: str,
+        context: str | None = None,
+        fields: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"token_address": bench, "content": content}
+        if context:
+            body["context"] = context
+        params: dict[str, str] = {}
+        if fields:
+            params["fields"] = fields
+        if dry_run:
+            params["dry_run"] = "true"
+        return await self._client._post("/harness/evaluate", json=body, params=params)
+
+    async def list(self, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
+        params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
+        return cast(dict[str, Any], await self._client._get("/harnesses", params=params, auth=False))
+
+    async def info(self, bench: str) -> dict[str, Any]:
+        return cast(dict[str, Any], await self._client._get(f"/harness/{bench}/info", auth=False))
 
 
 class _AsyncSchemaResource:

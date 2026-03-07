@@ -133,6 +133,76 @@ class TestSubmissionCreate:
         assert result.exit_code != 0
 
 
+class TestOrchestratorEvaluate:
+    @patch("alphakek.cli.main._make_client")
+    def test_evaluate_with_flags(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.orchestrator.evaluate.return_value = {
+            "score": 0.85,
+            "tldr": "Good analysis",
+            "lp_cost": 10.0,
+            "lp_remaining": 32.0,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["orchestrator", "evaluate", "--bench", "7xKXtg", "--content", "Test content"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["score"] == 0.85
+
+    @patch("alphakek.cli.main._make_client")
+    def test_evaluate_with_json(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.orchestrator.evaluate.return_value = {"score": 0.9, "tldr": "Great"}
+        mock_make.return_value = mock_client
+
+        body = json.dumps({"token_address": "7xKXtg", "content": "Test", "fields": "score,tldr"})
+        result = runner.invoke(app, ["orchestrator", "evaluate", "--json", body])
+        assert result.exit_code == 0
+
+    def test_evaluate_without_bench_errors(self):
+        result = runner.invoke(app, ["orchestrator", "evaluate", "--content", "Test"])
+        assert result.exit_code != 0
+
+    def test_evaluate_without_content_errors(self):
+        result = runner.invoke(app, ["orchestrator", "evaluate", "--bench", "7xKXtg"])
+        assert result.exit_code != 0
+
+
+class TestOrchestratorList:
+    @patch("alphakek.cli.main._make_client")
+    def test_list_orchestrators(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.orchestrator.list.return_value = {
+            "harnesses": [{"token_name": "Pizza", "status": "trained"}],
+            "total": 1,
+            "has_more": False,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["orchestrator", "list"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["total"] == 1
+
+
+class TestOrchestratorInfo:
+    @patch("alphakek.cli.main._make_client")
+    def test_info(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.orchestrator.info.return_value = {
+            "token_name": "Pizza",
+            "version": 3,
+            "status": "trained",
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["orchestrator", "info", "7xKXtg"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "trained"
+
+
 class TestSchemaCommand:
     @patch("alphakek.cli.main._make_client")
     def test_list_all_endpoints(self, mock_make):

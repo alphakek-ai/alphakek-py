@@ -122,6 +122,32 @@ class TestSubmissionResource:
         assert "dry_run=true" in str(route.calls[0].request.url)
 
 
+class TestOrchestratorResource:
+    @respx.mock
+    def test_evaluate(self, client: Client, base_url: str):
+        respx.post(f"{base_url}/harness/evaluate").mock(
+            return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
+        )
+        result = client.orchestrator.evaluate(bench="7xKXtg", content="Test content")
+        assert result["score"] == 0.85
+
+    @respx.mock
+    def test_list(self, client: Client, base_url: str):
+        respx.get(f"{base_url}/harnesses").mock(
+            return_value=httpx.Response(200, json={"harnesses": [], "total": 0, "has_more": False})
+        )
+        result = client.orchestrator.list()
+        assert result["total"] == 0
+
+    @respx.mock
+    def test_info(self, client: Client, base_url: str):
+        respx.get(f"{base_url}/harness/7xKXtg/info").mock(
+            return_value=httpx.Response(200, json={"token_name": "Pizza", "version": 3, "status": "trained"})
+        )
+        result = client.orchestrator.info("7xKXtg")
+        assert result["status"] == "trained"
+
+
 class TestSchemaResource:
     @respx.mock
     def test_openapi(self, client: Client, base_url: str):

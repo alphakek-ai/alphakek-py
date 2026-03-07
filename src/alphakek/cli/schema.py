@@ -59,6 +59,9 @@ def schema(
         "submission.create": ("post", "/next/submit"),
         "bench.list": ("get", "/alive-tokens"),
         "bench.view": ("get", "/alive-tokens/{token_address}"),
+        "orchestrator.evaluate": ("post", "/harness/evaluate"),
+        "orchestrator.list": ("get", "/harnesses"),
+        "orchestrator.info": ("get", "/harness/{token_address}/info"),
     }
 
     if command in command_map:

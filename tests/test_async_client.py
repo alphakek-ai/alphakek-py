@@ -79,6 +79,32 @@ class TestAsyncSubmissionResource:
         assert result["submission_id"] == "sub-1"
 
 
+class TestAsyncOrchestratorResource:
+    @respx.mock
+    async def test_evaluate(self, client):
+        respx.post(f"{BASE}/harness/evaluate").mock(
+            return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
+        )
+        result = await client.orchestrator.evaluate(bench="7xKXtg", content="Test")
+        assert result["score"] == 0.85
+
+    @respx.mock
+    async def test_list(self, client):
+        respx.get(f"{BASE}/harnesses").mock(
+            return_value=httpx.Response(200, json={"harnesses": [], "total": 0, "has_more": False})
+        )
+        result = await client.orchestrator.list()
+        assert result["total"] == 0
+
+    @respx.mock
+    async def test_info(self, client):
+        respx.get(f"{BASE}/harness/7xKXtg/info").mock(
+            return_value=httpx.Response(200, json={"token_name": "Pizza", "version": 3, "status": "trained"})
+        )
+        result = await client.orchestrator.info("7xKXtg")
+        assert result["status"] == "trained"
+
+
 class TestAsyncSchemaResource:
     @respx.mock
     async def test_openapi(self, client):
