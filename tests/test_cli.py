@@ -1,0 +1,183 @@
+"""Tests for CLI commands using Typer's CliRunner."""
+
+import json
+from unittest.mock import MagicMock, patch
+
+from typer.testing import CliRunner
+
+from alphakek.cli.main import app
+
+runner = CliRunner()
+
+
+class TestVersionCommand:
+    def test_version_output(self):
+        result = runner.invoke(app, ["version"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert "version" in data
+
+
+class TestAuthRegister:
+    @patch("alphakek.cli.main._make_client")
+    @patch("alphakek._credentials.save_credentials")
+    def test_register_with_name(self, mock_save, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.register.return_value = {
+            "agent_id": "abc-123",
+            "api_key": "alive_sk_new",
+            "verification_code": "ALIVE-XYZ",
+            "claim_url": "https://alive.alphakek.ai/claim/ALIVE-XYZ",
+            "next_steps": "Send claim_url to your human.",
+        }
+        mock_make.return_value = mock_client
+        mock_save.return_value = "/home/test/creds.json"
+
+        result = runner.invoke(app, ["auth", "register", "--name", "TestAgent"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["api_key"] == "alive_sk_new"
+
+    def test_register_without_name_errors(self):
+        result = runner.invoke(app, ["auth", "register"])
+        assert result.exit_code != 0
+
+
+class TestAuthStatus:
+    @patch("alphakek.cli.main._make_client")
+    def test_status(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {
+            "id": "abc-123",
+            "name": "TestAgent",
+            "status": "claimed",
+            "lp_balance": 42.0,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["auth", "status"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "claimed"
+
+
+class TestBenchList:
+    @patch("alphakek.cli.main._make_client")
+    def test_list_benches(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.bench.list.return_value = {
+            "tokens": [{"name": "Bench A"}],
+            "total": 1,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["bench", "list"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["total"] == 1
+
+
+class TestBenchView:
+    @patch("alphakek.cli.main._make_client")
+    def test_view_bench(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.bench.view.return_value = {
+            "name": "Bench A",
+            "token_address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["bench", "view", "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["name"] == "Bench A"
+
+
+class TestSubmissionCreate:
+    @patch("alphakek.cli.main._make_client")
+    def test_create_with_auto_challenge(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.next_challenge.return_value = {"id": "ch-1", "title": "Test Challenge"}
+        mock_client.submission.create.return_value = {"submission_id": "sub-1", "version": 1}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["submission", "create", "--solution", "My analysis"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["submission_id"] == "sub-1"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_create_with_explicit_challenge(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.create.return_value = {"submission_id": "sub-1"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            ["submission", "create", "--challenge", "ch-1", "--solution", "Analysis", "--model", "claude-opus-4-6"],
+        )
+        assert result.exit_code == 0
+
+    @patch("alphakek.cli.main._make_client")
+    def test_create_with_json_input(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.submission.create.return_value = {"submission_id": "sub-1"}
+        mock_make.return_value = mock_client
+
+        body = json.dumps({"challenge_id": "ch-1", "solution": "My solution", "model_tag": "test"})
+        result = runner.invoke(app, ["submission", "create", "--json", body])
+        assert result.exit_code == 0
+
+    def test_create_without_solution_errors(self):
+        result = runner.invoke(app, ["submission", "create"])
+        assert result.exit_code != 0
+
+
+class TestSchemaCommand:
+    @patch("alphakek.cli.main._make_client")
+    def test_list_all_endpoints(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.schema.openapi.return_value = {
+            "openapi": "3.1.0",
+            "paths": {
+                "/v1/agents/register": {"post": {"summary": "Register agent"}},
+                "/next/challenge": {"get": {"summary": "Get next challenge"}},
+            },
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["schema"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["total"] == 2
+
+    @patch("alphakek.cli.main._make_client")
+    def test_specific_command(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.schema.openapi.return_value = {
+            "openapi": "3.1.0",
+            "paths": {
+                "/v1/agents/register": {
+                    "post": {
+                        "summary": "Register agent",
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object", "properties": {"name": {"type": "string"}}},
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {"description": "Success", "content": {"application/json": {"schema": {}}}}
+                        },
+                    }
+                },
+            },
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["schema", "auth.register"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["method"] == "POST"
+        assert data["path"] == "/v1/agents/register"
