@@ -19,9 +19,9 @@ def schema(
 
     Examples::
 
-        alphakek schema                    # List all endpoints
-        alphakek schema submission.create  # Show POST /next/submit schema
-        alphakek schema auth.register      # Show POST /v1/agents/register schema
+        alphakek schema                      # List all endpoints
+        alphakek schema submission.create    # Show POST /v1/submissions schema
+        alphakek schema orchestrator.query   # Show POST /v1/orchestrator/query schema
     """
     from alphakek.cli.main import _error, _make_client, _output
 
@@ -56,12 +56,13 @@ def schema(
     command_map = {
         "auth.register": ("post", "/v1/agents/register"),
         "auth.status": ("get", "/v1/agents/me"),
-        "submission.create": ("post", "/next/submit"),
-        "bench.list": ("get", "/alive-tokens"),
-        "bench.view": ("get", "/alive-tokens/{token_address}"),
-        "orchestrator.evaluate": ("post", "/harness/evaluate"),
-        "orchestrator.list": ("get", "/harnesses"),
-        "orchestrator.info": ("get", "/harness/{token_address}/info"),
+        "submission.create": ("post", "/v1/submissions"),
+        "submission.next-challenge": ("get", "/v1/challenges/next"),
+        "bench.list": ("get", "/v1/benches"),
+        "bench.view": ("get", "/v1/benches/{token_address}"),
+        "orchestrator.query": ("post", "/v1/orchestrator/query"),
+        "orchestrator.list": ("get", "/v1/orchestrators"),
+        "orchestrator.info": ("get", "/v1/orchestrators/{token_address}"),
     }
 
     if command in command_map:

@@ -40,18 +40,18 @@ class _BenchResource:
         self._client = client
 
     def list(self, *, fields: str | None = None) -> dict[str, Any]:
-        """List all benches. GET /alive-tokens"""
+        """List all benches. GET /v1/benches"""
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
-        return cast(dict[str, Any], self._client._get("/alive-tokens", params=params))
+        return cast(dict[str, Any], self._client._get("/v1/benches", params=params))
 
     def view(self, address: str, *, fields: str | None = None) -> dict[str, Any]:
-        """Get bench details. GET /alive-tokens/{address}"""
+        """Get bench details. GET /v1/benches/{address}"""
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
-        return cast(dict[str, Any], self._client._get(f"/alive-tokens/{address}", params=params))
+        return cast(dict[str, Any], self._client._get(f"/v1/benches/{address}", params=params))
 
 
 class _SubmissionResource:
@@ -61,14 +61,14 @@ class _SubmissionResource:
         self._client = client
 
     def next_challenge(self, *, bench: str | None = None) -> dict[str, Any] | None:
-        """Get next challenge to solve. GET /next/challenge
+        """Get next challenge to solve. GET /v1/challenges/next
 
         Returns None if no challenge available (HTTP 204).
         """
         params: dict[str, str] = {}
         if bench:
             params["bench"] = bench
-        return self._client._get("/next/challenge", params=params, allow_204=True)
+        return self._client._get("/v1/challenges/next", params=params, allow_204=True)
 
     def create(
         self,
@@ -78,7 +78,7 @@ class _SubmissionResource:
         model_tag: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Submit a solution. POST /next/submit"""
+        """Submit a solution. POST /v1/submissions"""
         body: dict[str, Any] = {
             "challenge_id": challenge_id,
             "solution": solution,
@@ -88,7 +88,7 @@ class _SubmissionResource:
         params: dict[str, str] = {}
         if dry_run:
             params["dry_run"] = "true"
-        return self._client._post("/next/submit", json=body, params=params)
+        return self._client._post("/v1/submissions", json=body, params=params)
 
 
 class _OrchestratorResource:
@@ -106,7 +106,7 @@ class _OrchestratorResource:
         fields: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Evaluate content using a bench's Orchestrator. POST /harness/evaluate"""
+        """Evaluate content using a bench's Orchestrator. POST /v1/orchestrator/query"""
         body: dict[str, Any] = {"token_address": bench, "content": content}
         if context:
             body["context"] = context
@@ -115,16 +115,16 @@ class _OrchestratorResource:
             params["fields"] = fields
         if dry_run:
             params["dry_run"] = "true"
-        return self._client._post("/harness/evaluate", json=body, params=params)
+        return self._client._post("/v1/orchestrator/query", json=body, params=params)
 
-    def list(self, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """List available Orchestrators. GET /harnesses"""
-        params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
-        return cast(dict[str, Any], self._client._get("/harnesses", params=params, auth=False))
+    def list(self, *, limit: int = 50) -> dict[str, Any]:
+        """List available Orchestrators. GET /v1/orchestrators"""
+        params: dict[str, str] = {"limit": str(limit)}
+        return cast(dict[str, Any], self._client._get("/v1/orchestrators", params=params, auth=False))
 
     def info(self, bench: str) -> dict[str, Any]:
-        """Get Orchestrator metadata. GET /harness/{token_address}/info"""
-        return cast(dict[str, Any], self._client._get(f"/harness/{bench}/info", auth=False))
+        """Get Orchestrator metadata. GET /v1/orchestrators/{bench}"""
+        return cast(dict[str, Any], self._client._get(f"/v1/orchestrators/{bench}", auth=False))
 
 
 class _SchemaResource:
@@ -293,13 +293,13 @@ class _AsyncBenchResource:
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
-        return cast(dict[str, Any], await self._client._get("/alive-tokens", params=params))
+        return cast(dict[str, Any], await self._client._get("/v1/benches", params=params))
 
     async def view(self, address: str, *, fields: str | None = None) -> dict[str, Any]:
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
-        return cast(dict[str, Any], await self._client._get(f"/alive-tokens/{address}", params=params))
+        return cast(dict[str, Any], await self._client._get(f"/v1/benches/{address}", params=params))
 
 
 class _AsyncSubmissionResource:
@@ -310,7 +310,7 @@ class _AsyncSubmissionResource:
         params: dict[str, str] = {}
         if bench:
             params["bench"] = bench
-        return await self._client._get("/next/challenge", params=params, allow_204=True)
+        return await self._client._get("/v1/challenges/next", params=params, allow_204=True)
 
     async def create(
         self,
@@ -329,7 +329,7 @@ class _AsyncSubmissionResource:
         params: dict[str, str] = {}
         if dry_run:
             params["dry_run"] = "true"
-        return await self._client._post("/next/submit", json=body, params=params)
+        return await self._client._post("/v1/submissions", json=body, params=params)
 
 
 class _AsyncOrchestratorResource:
@@ -353,14 +353,14 @@ class _AsyncOrchestratorResource:
             params["fields"] = fields
         if dry_run:
             params["dry_run"] = "true"
-        return await self._client._post("/harness/evaluate", json=body, params=params)
+        return await self._client._post("/v1/orchestrator/query", json=body, params=params)
 
-    async def list(self, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        params: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
-        return cast(dict[str, Any], await self._client._get("/harnesses", params=params, auth=False))
+    async def list(self, *, limit: int = 50) -> dict[str, Any]:
+        params: dict[str, str] = {"limit": str(limit)}
+        return cast(dict[str, Any], await self._client._get("/v1/orchestrators", params=params, auth=False))
 
     async def info(self, bench: str) -> dict[str, Any]:
-        return cast(dict[str, Any], await self._client._get(f"/harness/{bench}/info", auth=False))
+        return cast(dict[str, Any], await self._client._get(f"/v1/orchestrators/{bench}", auth=False))
 
 
 class _AsyncSchemaResource:

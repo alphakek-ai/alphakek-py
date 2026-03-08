@@ -41,16 +41,16 @@ class TestAsyncAuthResource:
 class TestAsyncBenchResource:
     @respx.mock
     async def test_list(self, client):
-        respx.get(f"{BASE}/alive-tokens").mock(
-            return_value=httpx.Response(200, json={"tokens": [{"name": "Bench A"}], "total": 1})
+        respx.get(f"{BASE}/v1/benches").mock(
+            return_value=httpx.Response(200, json={"data": [{"name": "Bench A"}], "has_more": False})
         )
         result = await client.bench.list()
-        assert result["total"] == 1
+        assert result["has_more"] is False
 
     @respx.mock
     async def test_view(self, client):
         addr = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-        respx.get(f"{BASE}/alive-tokens/{addr}").mock(
+        respx.get(f"{BASE}/v1/benches/{addr}").mock(
             return_value=httpx.Response(200, json={"name": "Bench A", "token_address": addr})
         )
         result = await client.bench.view(addr)
@@ -60,19 +60,21 @@ class TestAsyncBenchResource:
 class TestAsyncSubmissionResource:
     @respx.mock
     async def test_next_challenge(self, client):
-        respx.get(f"{BASE}/next/challenge").mock(return_value=httpx.Response(200, json={"id": "ch-1", "title": "Test"}))
+        respx.get(f"{BASE}/v1/challenges/next").mock(
+            return_value=httpx.Response(200, json={"id": "ch-1", "title": "Test"})
+        )
         result = await client.submission.next_challenge()
         assert result["id"] == "ch-1"
 
     @respx.mock
     async def test_next_challenge_returns_none_on_204(self, client):
-        respx.get(f"{BASE}/next/challenge").mock(return_value=httpx.Response(204))
+        respx.get(f"{BASE}/v1/challenges/next").mock(return_value=httpx.Response(204))
         result = await client.submission.next_challenge()
         assert result is None
 
     @respx.mock
     async def test_create_submission(self, client):
-        respx.post(f"{BASE}/next/submit").mock(
+        respx.post(f"{BASE}/v1/submissions").mock(
             return_value=httpx.Response(200, json={"submission_id": "sub-1", "version": 1})
         )
         result = await client.submission.create(challenge_id="ch-1", solution="My analysis")
@@ -82,7 +84,7 @@ class TestAsyncSubmissionResource:
 class TestAsyncOrchestratorResource:
     @respx.mock
     async def test_evaluate(self, client):
-        respx.post(f"{BASE}/harness/evaluate").mock(
+        respx.post(f"{BASE}/v1/orchestrator/query").mock(
             return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
         )
         result = await client.orchestrator.evaluate(bench="7xKXtg", content="Test")
@@ -90,15 +92,15 @@ class TestAsyncOrchestratorResource:
 
     @respx.mock
     async def test_list(self, client):
-        respx.get(f"{BASE}/harnesses").mock(
-            return_value=httpx.Response(200, json={"harnesses": [], "total": 0, "has_more": False})
+        respx.get(f"{BASE}/v1/orchestrators").mock(
+            return_value=httpx.Response(200, json={"data": [], "has_more": False})
         )
         result = await client.orchestrator.list()
-        assert result["total"] == 0
+        assert result["has_more"] is False
 
     @respx.mock
     async def test_info(self, client):
-        respx.get(f"{BASE}/harness/7xKXtg/info").mock(
+        respx.get(f"{BASE}/v1/orchestrators/7xKXtg").mock(
             return_value=httpx.Response(200, json={"token_name": "Pizza", "version": 3, "status": "trained"})
         )
         result = await client.orchestrator.info("7xKXtg")

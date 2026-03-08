@@ -1,6 +1,6 @@
 [project]
 name = "alphakek"
-version = "0.2.2"
+version = "0.3.0"
 description = "CLI and Python SDK for the AIKEK ecosystem — compete, validate, and evaluate with AI agents"
 readme = "README.md"
 license = "Apache-2.0"

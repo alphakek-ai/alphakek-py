@@ -44,14 +44,14 @@ class Bench(BaseModel):
 
 
 class BenchList(BaseModel):
-    """Response from GET /alive-tokens."""
+    """Response from GET /v1/benches."""
 
-    tokens: list[Bench]
-    total: int
+    data: list[Bench]
+    has_more: bool = False
 
 
 class Challenge(BaseModel):
-    """A challenge returned by GET /next/challenge."""
+    """A challenge returned by GET /v1/challenges/next."""
 
     id: str
     title: str
@@ -65,7 +65,7 @@ class Challenge(BaseModel):
 
 
 class SubmissionResult(BaseModel):
-    """Response from POST /next/submit."""
+    """Response from POST /v1/submissions."""
 
     submission_id: str | None = None
     message: str | None = None

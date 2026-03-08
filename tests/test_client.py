@@ -61,19 +61,19 @@ class TestAuthResource:
 class TestBenchResource:
     @respx.mock
     def test_list(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/alive-tokens").mock(
+        respx.get(f"{base_url}/v1/benches").mock(
             return_value=httpx.Response(
                 200,
-                json={"tokens": [{"name": "Test Bench", "token_address": "ABC123"}], "total": 1},
+                json={"data": [{"name": "Test Bench", "token_address": "ABC123"}], "has_more": False},
             )
         )
         result = client.bench.list()
-        assert result["total"] == 1
-        assert result["tokens"][0]["name"] == "Test Bench"
+        assert result["has_more"] is False
+        assert result["data"][0]["name"] == "Test Bench"
 
     @respx.mock
     def test_view(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/alive-tokens/ABC123").mock(
+        respx.get(f"{base_url}/v1/benches/ABC123").mock(
             return_value=httpx.Response(200, json={"name": "Test Bench", "token_address": "ABC123"})
         )
         result = client.bench.view("ABC123")
@@ -83,7 +83,7 @@ class TestBenchResource:
 class TestSubmissionResource:
     @respx.mock
     def test_next_challenge(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/next/challenge").mock(
+        respx.get(f"{base_url}/v1/challenges/next").mock(
             return_value=httpx.Response(200, json={"id": "ch-1", "title": "Test Challenge"})
         )
         result = client.submission.next_challenge()
@@ -92,13 +92,13 @@ class TestSubmissionResource:
 
     @respx.mock
     def test_next_challenge_returns_none_on_204(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/next/challenge").mock(return_value=httpx.Response(204))
+        respx.get(f"{base_url}/v1/challenges/next").mock(return_value=httpx.Response(204))
         result = client.submission.next_challenge()
         assert result is None
 
     @respx.mock
     def test_create_submission(self, client: Client, base_url: str):
-        respx.post(f"{base_url}/next/submit").mock(
+        respx.post(f"{base_url}/v1/submissions").mock(
             return_value=httpx.Response(201, json={"submission_id": "sub-1", "version": 1})
         )
         result = client.submission.create(
@@ -110,7 +110,7 @@ class TestSubmissionResource:
 
     @respx.mock
     def test_create_submission_dry_run(self, client: Client, base_url: str):
-        route = respx.post(f"{base_url}/next/submit").mock(
+        route = respx.post(f"{base_url}/v1/submissions").mock(
             return_value=httpx.Response(200, json={"submission_id": None, "dry_run": True})
         )
         client.submission.create(
@@ -125,7 +125,7 @@ class TestSubmissionResource:
 class TestOrchestratorResource:
     @respx.mock
     def test_evaluate(self, client: Client, base_url: str):
-        respx.post(f"{base_url}/harness/evaluate").mock(
+        respx.post(f"{base_url}/v1/orchestrator/query").mock(
             return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
         )
         result = client.orchestrator.evaluate(bench="7xKXtg", content="Test content")
@@ -133,15 +133,15 @@ class TestOrchestratorResource:
 
     @respx.mock
     def test_list(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/harnesses").mock(
-            return_value=httpx.Response(200, json={"harnesses": [], "total": 0, "has_more": False})
+        respx.get(f"{base_url}/v1/orchestrators").mock(
+            return_value=httpx.Response(200, json={"data": [], "has_more": False})
         )
         result = client.orchestrator.list()
-        assert result["total"] == 0
+        assert result["has_more"] is False
 
     @respx.mock
     def test_info(self, client: Client, base_url: str):
-        respx.get(f"{base_url}/harness/7xKXtg/info").mock(
+        respx.get(f"{base_url}/v1/orchestrators/7xKXtg").mock(
             return_value=httpx.Response(200, json={"token_name": "Pizza", "version": 3, "status": "trained"})
         )
         result = client.orchestrator.info("7xKXtg")

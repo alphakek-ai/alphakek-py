@@ -67,15 +67,15 @@ class TestBenchList:
     def test_list_benches(self, mock_make):
         mock_client = MagicMock()
         mock_client.bench.list.return_value = {
-            "tokens": [{"name": "Bench A"}],
-            "total": 1,
+            "data": [{"name": "Bench A"}],
+            "has_more": False,
         }
         mock_make.return_value = mock_client
 
         result = runner.invoke(app, ["bench", "list"])
         assert result.exit_code == 0
         data = json.loads(result.stdout)
-        assert data["total"] == 1
+        assert data["has_more"] is False
 
 
 class TestBenchView:
@@ -235,8 +235,7 @@ class TestOrchestratorList:
     def test_list_orchestrators(self, mock_make):
         mock_client = MagicMock()
         mock_client.orchestrator.list.return_value = {
-            "harnesses": [{"token_name": "Pizza", "status": "trained"}],
-            "total": 1,
+            "data": [{"token_name": "Pizza", "status": "trained"}],
             "has_more": False,
         }
         mock_make.return_value = mock_client
@@ -244,7 +243,7 @@ class TestOrchestratorList:
         result = runner.invoke(app, ["orchestrator", "list"])
         assert result.exit_code == 0
         data = json.loads(result.stdout)
-        assert data["total"] == 1
+        assert data["has_more"] is False
 
 
 class TestOrchestratorInfo:
@@ -272,7 +271,7 @@ class TestSchemaCommand:
             "openapi": "3.1.0",
             "paths": {
                 "/v1/agents/register": {"post": {"summary": "Register agent"}},
-                "/next/challenge": {"get": {"summary": "Get next challenge"}},
+                "/v1/challenges/next": {"get": {"summary": "Get next challenge"}},
             },
         }
         mock_make.return_value = mock_client

@@ -77,14 +77,13 @@ def evaluate(
 def list_orchestrators(
     ctx: typer.Context,
     limit: Annotated[int, typer.Option("--limit", help="Max results.")] = 50,
-    offset: Annotated[int, typer.Option("--offset", help="Pagination offset.")] = 0,
 ) -> None:
     """List all available Orchestrators."""
     from alphakek.cli.main import _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
-        result = client.orchestrator.list(limit=limit, offset=offset)
+        result = client.orchestrator.list(limit=limit)
     except httpx.HTTPStatusError as e:
         _error(f"Failed to list orchestrators: {e.response.text}")
     except httpx.RequestError as e:
