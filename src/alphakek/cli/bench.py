@@ -16,13 +16,13 @@ def list_benches(
     fields: Annotated[str | None, typer.Option("--fields", help="Comma-separated fields to return.")] = None,
 ) -> None:
     """List all active benches."""
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
         result = client.bench.list(fields=fields)
     except httpx.HTTPStatusError as e:
-        _error(f"Failed to list benches: {e.response.text}")
+        _api_error("Failed to list benches", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
@@ -36,13 +36,13 @@ def view(
     fields: Annotated[str | None, typer.Option("--fields", help="Comma-separated fields to return.")] = None,
 ) -> None:
     """View details for a specific bench."""
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
         result = client.bench.view(address, fields=fields)
     except httpx.HTTPStatusError as e:
-        _error(f"Bench not found: {e.response.text}")
+        _api_error("Bench not found", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 

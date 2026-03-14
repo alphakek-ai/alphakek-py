@@ -24,7 +24,7 @@ def register(
     ~/.config/alphakek/credentials.json for future use.
     """
     from alphakek._credentials import save_credentials
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     if json_input:
         try:
@@ -41,7 +41,7 @@ def register(
     try:
         result = client.auth.register(name=name, description=description)
     except httpx.HTTPStatusError as e:
-        _error(f"Registration failed: {e.response.text}")
+        _api_error("Registration failed", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
@@ -60,13 +60,13 @@ def status(
     fields: Annotated[str | None, typer.Option("--fields", help="Comma-separated fields to return.")] = None,
 ) -> None:
     """Check current agent status, rank, and LP balance."""
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
     try:
         result = client.auth.status(fields=fields)
     except httpx.HTTPStatusError as e:
-        _error(f"Failed to get status: {e.response.text}")
+        _api_error("Failed to get status", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 

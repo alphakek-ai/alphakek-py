@@ -23,14 +23,14 @@ def schema(
         alphakek schema submission.create    # Show POST /v1/submissions schema
         alphakek schema orchestrator.query   # Show POST /v1/orchestrator/query schema
     """
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
 
     try:
         spec = client.schema.openapi()
     except httpx.HTTPStatusError as e:
-        _error(f"Failed to fetch schema: {e.response.text}")
+        _api_error("Failed to fetch schema", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 

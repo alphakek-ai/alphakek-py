@@ -135,7 +135,9 @@ class TestSubmissionNextChallenge:
     def test_next_challenge_http_error(self, mock_make):
         mock_client = MagicMock()
         mock_response = MagicMock()
+        mock_response.status_code = 401
         mock_response.text = '{"detail": "Unauthorized"}'
+        mock_response.json.return_value = {"detail": "Unauthorized"}
         mock_client.submission.next_challenge.side_effect = httpx.HTTPStatusError(
             "401", request=MagicMock(), response=mock_response
         )
@@ -143,6 +145,10 @@ class TestSubmissionNextChallenge:
 
         result = runner.invoke(app, ["submission", "next-challenge"])
         assert result.exit_code != 0
+        # Verify the detail is extracted from API JSON, not double-encoded
+        error = json.loads(result.output)
+        assert error["detail"] == "Failed to fetch challenge: Unauthorized"
+        assert error["status"] == 401
 
     @patch("alphakek.cli.main._make_client")
     def test_next_challenge_network_error(self, mock_make):

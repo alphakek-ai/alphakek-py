@@ -28,7 +28,7 @@ def evaluate(
 
     Costs LP per query. Use --dry-run to check balance without deducting.
     """
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     if json_input:
         try:
@@ -66,7 +66,7 @@ def evaluate(
             dry_run=dry_run,
         )
     except httpx.HTTPStatusError as e:
-        _error(f"Evaluation failed: {e.response.text}")
+        _api_error("Evaluation failed", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
@@ -79,13 +79,13 @@ def list_orchestrators(
     limit: Annotated[int, typer.Option("--limit", help="Max results.")] = 50,
 ) -> None:
     """List all available Orchestrators."""
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
         result = client.orchestrator.list(limit=limit)
     except httpx.HTTPStatusError as e:
-        _error(f"Failed to list orchestrators: {e.response.text}")
+        _api_error("Failed to list orchestrators", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
@@ -98,13 +98,13 @@ def info(
     bench: Annotated[str, typer.Argument(help="Bench token address.")],
 ) -> None:
     """Get metadata about a specific bench's Orchestrator."""
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
         result = client.orchestrator.info(bench)
     except httpx.HTTPStatusError as e:
-        _error(f"Orchestrator not found: {e.response.text}")
+        _api_error("Orchestrator not found", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 

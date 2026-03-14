@@ -47,6 +47,25 @@ def _error(message: str, *, status: int = 1) -> NoReturn:
     raise typer.Exit(code=status)
 
 
+def _api_error(context: str, exc: "httpx.HTTPStatusError") -> NoReturn:
+    """Extract detail from an API error response and pass to _error().
+
+    Parses the response JSON to extract the ``detail`` field, avoiding
+    double-encoded JSON in the CLI output.  Falls back to raw response
+    text when the body isn't valid JSON or lacks a ``detail`` key.
+    """
+    import httpx as _httpx  # noqa: F811 — deferred to keep top-level import-free
+
+    assert isinstance(exc, _httpx.HTTPStatusError)
+    status_code = exc.response.status_code
+    try:
+        body = exc.response.json()
+        detail = body.get("detail", exc.response.text) if isinstance(body, dict) else exc.response.text
+    except Exception:
+        detail = exc.response.text
+    _error(f"{context}: {detail}", status=status_code)
+
+
 def _make_client(
     api_key: str | None = None,
     base_url: str | None = None,

@@ -23,19 +23,19 @@ def next_challenge(
     Returns the challenge JSON (id, title, research_context, etc.) or
     null with exit code 1 if no challenge is available.
     """
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
 
     try:
         challenge = client.submission.next_challenge(bench=bench)
     except httpx.HTTPStatusError as e:
-        _error(f"Failed to fetch challenge: {e.response.text}")
+        _api_error("Failed to fetch challenge", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
     if challenge is None:
-        typer.echo("null")
+        typer.echo(json.dumps(None))
         raise typer.Exit(code=1)
 
     _output(challenge)
@@ -61,7 +61,7 @@ def create(
     If --challenge is omitted, auto-fetches the next available challenge.
     Solution can come from --solution, --file, or --json.
     """
-    from alphakek.cli.main import _error, _make_client, _output
+    from alphakek.cli.main import _api_error, _error, _make_client, _output
 
     # Parse --json input (overrides all flags)
     if json_input:
@@ -93,7 +93,7 @@ def create(
         try:
             challenge = client.submission.next_challenge(bench=bench)
         except httpx.HTTPStatusError as e:
-            _error(f"Failed to fetch challenge: {e.response.text}")
+            _api_error("Failed to fetch challenge", e)
         except httpx.RequestError as e:
             _error(f"Network error: {e}")
 
@@ -118,7 +118,7 @@ def create(
             dry_run=dry_run,
         )
     except httpx.HTTPStatusError as e:
-        _error(f"Submission failed: {e.response.text}")
+        _api_error("Submission failed", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
 
