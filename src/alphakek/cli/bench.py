@@ -13,6 +13,9 @@ app = typer.Typer(no_args_is_help=True)
 @app.command("list")
 def list_benches(
     ctx: typer.Context,
+    tier: Annotated[
+        str | None, typer.Option("--tier", help="Filter by quality tier: gold, silver, bronze, unranked.")
+    ] = None,
     fields: Annotated[str | None, typer.Option("--fields", help="Comma-separated fields to return.")] = None,
 ) -> None:
     """List all active benches."""
@@ -20,7 +23,7 @@ def list_benches(
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"), require_auth=False)
     try:
-        result = client.bench.list(fields=fields)
+        result = client.bench.list(tier=tier, fields=fields)
     except httpx.HTTPStatusError as e:
         _api_error("Failed to list benches", e)
     except httpx.RequestError as e:

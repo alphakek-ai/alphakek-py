@@ -39,9 +39,16 @@ class _BenchResource:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def list(self, *, fields: str | None = None) -> dict[str, Any]:
-        """List all benches. GET /v1/benches"""
+    def list(self, *, tier: str | None = None, fields: str | None = None) -> dict[str, Any]:
+        """List all benches. GET /v1/benches
+
+        Args:
+            tier: Filter by quality tier: 'gold', 'silver', 'bronze', 'unranked'.
+            fields: Comma-separated fields to return.
+        """
         params: dict[str, str] = {}
+        if tier:
+            params["tier"] = tier
         if fields:
             params["fields"] = fields
         return cast(dict[str, Any], self._client._get("/v1/benches", params=params))
@@ -261,8 +268,10 @@ class Client(_BaseClient):
         json: dict[str, Any] | None = None,
         params: dict[str, str] | None = None,
         auth: bool = True,
+        extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        resp = self._http.post(path, json=json, params=params, headers=self._headers(auth))
+        headers = {**self._headers(auth), **(extra_headers or {})}
+        resp = self._http.post(path, json=json, params=params, headers=headers)
         resp.raise_for_status()
         return resp.json()
 
@@ -355,8 +364,10 @@ class _AsyncBenchResource:
     def __init__(self, client: AsyncClient) -> None:
         self._client = client
 
-    async def list(self, *, fields: str | None = None) -> dict[str, Any]:
+    async def list(self, *, tier: str | None = None, fields: str | None = None) -> dict[str, Any]:
         params: dict[str, str] = {}
+        if tier:
+            params["tier"] = tier
         if fields:
             params["fields"] = fields
         return cast(dict[str, Any], await self._client._get("/v1/benches", params=params))
