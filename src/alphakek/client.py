@@ -145,6 +145,52 @@ class _OrchestratorResource:
         return cast(dict[str, Any], self._client._get(f"/v1/orchestrators/{bench}", auth=False))
 
 
+class _LambdaResource:
+    """Lambda (λ) balance, transfer, and transaction operations."""
+
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def balance(self) -> dict[str, Any]:
+        """Get current lambda balance. GET /v1/balance"""
+        return cast(dict[str, Any], self._client._get("/v1/balance"))
+
+    def transfer(
+        self,
+        *,
+        to: str,
+        amount: float,
+        metadata: dict[str, Any] | None = None,
+        dry_run: bool = False,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Transfer lambda to another agent. POST /v1/transfers"""
+        body: dict[str, Any] = {"to_agent_id": to, "amount": amount}
+        if metadata is not None:
+            body["metadata"] = metadata
+        if idempotency_key is not None:
+            body["idempotency_key"] = idempotency_key
+        params: dict[str, str] = {}
+        if dry_run:
+            params["dry_run"] = "true"
+        return self._client._post("/v1/transfers", json=body, params=params)
+
+    def transactions(
+        self,
+        *,
+        limit: int = 20,
+        starting_after: str | None = None,
+        type_filter: str | None = None,
+    ) -> dict[str, Any]:
+        """List lambda transaction history. GET /v1/balance_transactions"""
+        params: dict[str, str] = {"limit": str(limit)}
+        if starting_after:
+            params["starting_after"] = starting_after
+        if type_filter:
+            params["type"] = type_filter
+        return cast(dict[str, Any], self._client._get("/v1/balance_transactions", params=params))
+
+
 class _SchemaResource:
     """OpenAPI schema introspection."""
 
@@ -191,6 +237,7 @@ class Client(_BaseClient):
         self.bench = _BenchResource(self)
         self.submission = _SubmissionResource(self)
         self.orchestrator = _OrchestratorResource(self)
+        self.lambda_ = _LambdaResource(self)
         self.schema = _SchemaResource(self)
 
     def _get(
@@ -247,6 +294,7 @@ class AsyncClient(_BaseClient):
         self.bench = _AsyncBenchResource(self)
         self.submission = _AsyncSubmissionResource(self)
         self.orchestrator = _AsyncOrchestratorResource(self)
+        self.lambda_ = _AsyncLambdaResource(self)
         self.schema = _AsyncSchemaResource(self)
 
     async def _get(
@@ -398,6 +446,47 @@ class _AsyncOrchestratorResource:
 
     async def info(self, bench: str) -> dict[str, Any]:
         return cast(dict[str, Any], await self._client._get(f"/v1/orchestrators/{bench}", auth=False))
+
+
+class _AsyncLambdaResource:
+    def __init__(self, client: AsyncClient) -> None:
+        self._client = client
+
+    async def balance(self) -> dict[str, Any]:
+        return cast(dict[str, Any], await self._client._get("/v1/balance"))
+
+    async def transfer(
+        self,
+        *,
+        to: str,
+        amount: float,
+        metadata: dict[str, Any] | None = None,
+        dry_run: bool = False,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"to_agent_id": to, "amount": amount}
+        if metadata is not None:
+            body["metadata"] = metadata
+        if idempotency_key is not None:
+            body["idempotency_key"] = idempotency_key
+        params: dict[str, str] = {}
+        if dry_run:
+            params["dry_run"] = "true"
+        return await self._client._post("/v1/transfers", json=body, params=params)
+
+    async def transactions(
+        self,
+        *,
+        limit: int = 20,
+        starting_after: str | None = None,
+        type_filter: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, str] = {"limit": str(limit)}
+        if starting_after:
+            params["starting_after"] = starting_after
+        if type_filter:
+            params["type"] = type_filter
+        return cast(dict[str, Any], await self._client._get("/v1/balance_transactions", params=params))
 
 
 class _AsyncSchemaResource:
