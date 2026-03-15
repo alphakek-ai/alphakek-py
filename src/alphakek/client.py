@@ -97,19 +97,37 @@ class _OrchestratorResource:
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def evaluate(
+    def query(
         self,
         *,
-        bench: str,
-        content: str,
-        context: str | None = None,
+        candidates: list[str],
+        tokens: list[str],
+        prompt: str = "",
+        effort: str = "high",
         fields: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Evaluate content using a bench's Orchestrator. POST /v1/orchestrator/query"""
-        body: dict[str, Any] = {"token_address": bench, "content": content}
-        if context:
-            body["context"] = context
+        """Evaluate candidates against bench tokens. POST /v1/orchestrator/query
+
+        Args:
+            candidates: Content strings to evaluate (1-50).
+            tokens: Bench token addresses to evaluate against (1-10).
+            prompt: Optional context about the evaluation task.
+            effort: Thinking depth - 'low', 'medium', or 'high' (default).
+            fields: Comma-separated fields to return.
+            dry_run: Validate and check balance without deducting lambda.
+
+        Returns:
+            QueryResponse dict with 'results' (per-token), 'usage', and
+            'orchestrator_version'. Each result has 'candidates' (per-candidate
+            scores, analysis, backpressure) and 'ranked_indices'.
+        """
+        body: dict[str, Any] = {
+            "candidates": [{"type": "text", "content": c} for c in candidates],
+            "tokens": [{"address": t} for t in tokens],
+            "prompt": prompt,
+            "effort": effort,
+        }
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
@@ -336,18 +354,37 @@ class _AsyncOrchestratorResource:
     def __init__(self, client: AsyncClient) -> None:
         self._client = client
 
-    async def evaluate(
+    async def query(
         self,
         *,
-        bench: str,
-        content: str,
-        context: str | None = None,
+        candidates: list[str],
+        tokens: list[str],
+        prompt: str = "",
+        effort: str = "high",
         fields: str | None = None,
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        body: dict[str, Any] = {"token_address": bench, "content": content}
-        if context:
-            body["context"] = context
+        """Evaluate candidates against bench tokens. POST /v1/orchestrator/query
+
+        Args:
+            candidates: Content strings to evaluate (1-50).
+            tokens: Bench token addresses to evaluate against (1-10).
+            prompt: Optional context about the evaluation task.
+            effort: Thinking depth - 'low', 'medium', or 'high' (default).
+            fields: Comma-separated fields to return.
+            dry_run: Validate and check balance without deducting lambda.
+
+        Returns:
+            QueryResponse dict with 'results' (per-token), 'usage', and
+            'orchestrator_version'. Each result has 'candidates' (per-candidate
+            scores, analysis, backpressure) and 'ranked_indices'.
+        """
+        body: dict[str, Any] = {
+            "candidates": [{"type": "text", "content": c} for c in candidates],
+            "tokens": [{"address": t} for t in tokens],
+            "prompt": prompt,
+            "effort": effort,
+        }
         params: dict[str, str] = {}
         if fields:
             params["fields"] = fields
