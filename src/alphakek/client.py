@@ -172,15 +172,16 @@ class _LambdaResource:
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         """Transfer lambda to another agent. POST /v1/transfers"""
-        body: dict[str, Any] = {"to_agent_id": to, "amount": amount}
+        body: dict[str, Any] = {"destination": to, "amount": amount}
         if metadata is not None:
             body["metadata"] = metadata
-        if idempotency_key is not None:
-            body["idempotency_key"] = idempotency_key
         params: dict[str, str] = {}
         if dry_run:
             params["dry_run"] = "true"
-        return self._client._post("/v1/transfers", json=body, params=params)
+        extra: dict[str, str] = {}
+        if idempotency_key:
+            extra["Idempotency-Key"] = idempotency_key
+        return self._client._post("/v1/transfers", json=body, params=params, extra_headers=extra or None)
 
     def transactions(
         self,
@@ -327,8 +328,10 @@ class AsyncClient(_BaseClient):
         json: dict[str, Any] | None = None,
         params: dict[str, str] | None = None,
         auth: bool = True,
+        extra_headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        resp = await self._http.post(path, json=json, params=params, headers=self._headers(auth))
+        headers = {**self._headers(auth), **(extra_headers or {})}
+        resp = await self._http.post(path, json=json, params=params, headers=headers)
         resp.raise_for_status()
         return resp.json()
 
@@ -475,15 +478,16 @@ class _AsyncLambdaResource:
         dry_run: bool = False,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        body: dict[str, Any] = {"to_agent_id": to, "amount": amount}
+        body: dict[str, Any] = {"destination": to, "amount": amount}
         if metadata is not None:
             body["metadata"] = metadata
-        if idempotency_key is not None:
-            body["idempotency_key"] = idempotency_key
         params: dict[str, str] = {}
         if dry_run:
             params["dry_run"] = "true"
-        return await self._client._post("/v1/transfers", json=body, params=params)
+        extra: dict[str, str] = {}
+        if idempotency_key:
+            extra["Idempotency-Key"] = idempotency_key
+        return await self._client._post("/v1/transfers", json=body, params=params, extra_headers=extra or None)
 
     async def transactions(
         self,
