@@ -49,9 +49,9 @@ jobs:
           1. Read the README (or any top-level docs) to understand what this project is.
           2. Use git log, git diff, and any other tools to understand what changed.
 
-          Then output EXACTLY this format (nothing else — no explanation, no preamble):
+          Then output EXACTLY this format (nothing else):
           - First line: a short, catchy title for this update (under 40 chars). Summarize the theme of the changes.
-            Good: 'Lambda CLI Commands', 'Orchestrator Query API', 'Auth Register Guard'
+            Good: 'Lambda CLI Commands', 'SDK Auth Guard', 'Batch Orchestrator Support'
             Bad: 'alphakek-py', 'Update', 'Various fixes and improvements'
           - Second line: empty
           - Remaining lines: terse bullet-point summary of changes
@@ -59,13 +59,10 @@ jobs:
           Rules for bullets:
           - One line per logical change (2-5 lines)
           - Each line: emoji + short phrase (under 60 chars). Be direct, like a changelog.
-          - Good: '🔧 Renamed evaluate() to query() in orchestrator resource'
-          - Bad: '🔧 Improved the orchestrator evaluate method by renaming it to query for better clarity'
-          - Focus on value/outcome, not implementation details
           - No bullet point characters, no markdown. Just emoji + text, one per line.
           " --max-turns 10 > /tmp/summary.txt 2>/dev/null || true
 
-          # Fallback
+          # Fallback if Claude fails
           if [ ! -s /tmp/summary.txt ]; then
             printf "Update\n\n" > /tmp/summary.txt
             git log --pretty=format:"• %s" "${BEFORE}..${AFTER}" >> /tmp/summary.txt
@@ -81,15 +78,12 @@ jobs:
           COMMITS="${{ steps.range.outputs.commit_count }}"
           FILES="${{ steps.range.outputs.files_changed }}"
 
-          # First line = title, rest = body
           TITLE=$(head -1 /tmp/summary.txt)
           BODY=$(tail -n +3 /tmp/summary.txt)
 
-          # Escape HTML special chars
           TITLE=$(echo "$TITLE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
           BODY=$(echo "$BODY" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
-          # Repo display name from org/repo
           REPO_NAME=$(echo "$REPO" | sed 's|.*/||')
 
           TEXT=$(printf "📦 <b>%s</b>\n\n%s\n\n<a href=\"https://github.com/%s\">%s · %s commit(s) · %s file(s)</a>" \
@@ -99,12 +93,12 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$(jq -n \
               --arg chat_id "${TELEGRAM_CHAT_ID}" \
-              --argjson thread_id "${TELEGRAM_THREAD_ID}" \
+              --arg thread_id "${TELEGRAM_THREAD_ID}" \
               --arg text "$TEXT" \
               '{
                 chat_id: $chat_id,
-                message_thread_id: $thread_id,
+                message_thread_id: ($thread_id | tonumber),
                 parse_mode: "HTML",
                 text: $text,
                 disable_web_page_preview: true
-              }')" > /dev/null
+              }')"
