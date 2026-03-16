@@ -1,0 +1,110 @@
+name: Telegram Dev Updates (reusable)
+
+on:
+  workflow_call:
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+      TELEGRAM_BOT_TOKEN:
+        required: true
+      TELEGRAM_CHAT_ID:
+        required: true
+      TELEGRAM_THREAD_ID:
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Save commit range
+        id: range
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          if [[ "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            BEFORE="${AFTER}~1"
+          fi
+          echo "before=${BEFORE}" >> "$GITHUB_OUTPUT"
+          echo "after=${AFTER}" >> "$GITHUB_OUTPUT"
+          echo "commit_count=$(git rev-list --count "${BEFORE}..${AFTER}")" >> "$GITHUB_OUTPUT"
+          echo "files_changed=$(git diff --name-only "${BEFORE}" "${AFTER}" | wc -l)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate summary with Claude Code
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          BEFORE="${{ steps.range.outputs.before }}"
+          AFTER="${{ steps.range.outputs.after }}"
+
+          npx -y @anthropic-ai/claude-code -p "
+          You have access to a git repo. The commit range for this push is ${BEFORE}..${AFTER}.
+
+          1. Read the README (or any top-level docs) to understand what this project is.
+          2. Use git log, git diff, and any other tools to understand what changed.
+
+          Then output EXACTLY this format (nothing else — no explanation, no preamble):
+          - First line: a short, catchy title for this update (under 40 chars). Summarize the theme of the changes.
+            Good: 'Lambda CLI Commands', 'Orchestrator Query API', 'Auth Register Guard'
+            Bad: 'alphakek-py', 'Update', 'Various fixes and improvements'
+          - Second line: empty
+          - Remaining lines: terse bullet-point summary of changes
+
+          Rules for bullets:
+          - One line per logical change (2-5 lines)
+          - Each line: emoji + short phrase (under 60 chars). Be direct, like a changelog.
+          - Good: '🔧 Renamed evaluate() to query() in orchestrator resource'
+          - Bad: '🔧 Improved the orchestrator evaluate method by renaming it to query for better clarity'
+          - Focus on value/outcome, not implementation details
+          - No bullet point characters, no markdown. Just emoji + text, one per line.
+          " --max-turns 10 > /tmp/summary.txt 2>/dev/null || true
+
+          # Fallback
+          if [ ! -s /tmp/summary.txt ]; then
+            printf "Update\n\n" > /tmp/summary.txt
+            git log --pretty=format:"• %s" "${BEFORE}..${AFTER}" >> /tmp/summary.txt
+          fi
+
+      - name: Post to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+        run: |
+          REPO="${{ github.repository }}"
+          COMMITS="${{ steps.range.outputs.commit_count }}"
+          FILES="${{ steps.range.outputs.files_changed }}"
+
+          # First line = title, rest = body
+          TITLE=$(head -1 /tmp/summary.txt)
+          BODY=$(tail -n +3 /tmp/summary.txt)
+
+          # Escape HTML special chars
+          TITLE=$(echo "$TITLE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+          BODY=$(echo "$BODY" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+
+          # Repo display name from org/repo
+          REPO_NAME=$(echo "$REPO" | sed 's|.*/||')
+
+          TEXT=$(printf "📦 <b>%s</b>\n\n%s\n\n<a href=\"https://github.com/%s\">%s · %s commit(s) · %s file(s)</a>" \
+            "$TITLE" "$BODY" "$REPO" "$REPO_NAME" "$COMMITS" "$FILES")
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg chat_id "${TELEGRAM_CHAT_ID}" \
+              --argjson thread_id "${TELEGRAM_THREAD_ID}" \
+              --arg text "$TEXT" \
+              '{
+                chat_id: $chat_id,
+                message_thread_id: $thread_id,
+                parse_mode: "HTML",
+                text: $text,
+                disable_web_page_preview: true
+              }')" > /dev/null
