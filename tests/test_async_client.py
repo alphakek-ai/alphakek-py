@@ -83,12 +83,14 @@ class TestAsyncSubmissionResource:
 
 class TestAsyncOrchestratorResource:
     @respx.mock
-    async def test_evaluate(self, client):
+    async def test_query(self, client):
         respx.post(f"{BASE}/v1/orchestrator/query").mock(
-            return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
+            return_value=httpx.Response(
+                200, json={"results": [], "usage": {"lambda_cost": 0.1, "lambda_remaining": 99.9}}
+            )
         )
-        result = await client.orchestrator.evaluate(bench="7xKXtg", content="Test")
-        assert result["score"] == 0.85
+        result = await client.orchestrator.query(candidates=["Test"], tokens=["7xKXtg"])
+        assert "usage" in result
 
     @respx.mock
     async def test_list(self, client):

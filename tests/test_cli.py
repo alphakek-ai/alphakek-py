@@ -200,39 +200,45 @@ class TestSubmissionCreate:
         assert result.exit_code != 0
 
 
-class TestOrchestratorEvaluate:
+class TestOrchestratorQuery:
     @patch("alphakek.cli.main._make_client")
-    def test_evaluate_with_flags(self, mock_make):
+    def test_query_with_flags(self, mock_make):
         mock_client = MagicMock()
-        mock_client.orchestrator.evaluate.return_value = {
-            "score": 0.85,
-            "tldr": "Good analysis",
-            "lp_cost": 10.0,
-            "lp_remaining": 32.0,
+        mock_client.orchestrator.query.return_value = {
+            "results": [{"token_address": "7xKXtg", "candidates": [{"score": 0.85}], "ranked_indices": [0]}],
+            "usage": {"lambda_cost": 0.1, "lambda_remaining": 32.0},
         }
         mock_make.return_value = mock_client
 
-        result = runner.invoke(app, ["orchestrator", "evaluate", "--bench", "7xKXtg", "--content", "Test content"])
+        result = runner.invoke(app, ["orchestrator", "query", "--bench", "7xKXtg", "--content", "Test content"])
         assert result.exit_code == 0
         data = json.loads(result.stdout)
-        assert data["score"] == 0.85
+        assert "results" in data
 
     @patch("alphakek.cli.main._make_client")
-    def test_evaluate_with_json(self, mock_make):
+    def test_query_with_json(self, mock_make):
         mock_client = MagicMock()
-        mock_client.orchestrator.evaluate.return_value = {"score": 0.9, "tldr": "Great"}
+        mock_client.orchestrator.query.return_value = {
+            "results": [],
+            "usage": {"lambda_cost": 0.1, "lambda_remaining": 99.9},
+        }
         mock_make.return_value = mock_client
 
-        body = json.dumps({"token_address": "7xKXtg", "content": "Test", "fields": "score,tldr"})
-        result = runner.invoke(app, ["orchestrator", "evaluate", "--json", body])
+        body = json.dumps(
+            {
+                "candidates": [{"type": "text", "content": "Test"}],
+                "tokens": [{"address": "7xKXtg"}],
+            }
+        )
+        result = runner.invoke(app, ["orchestrator", "query", "--json", body])
         assert result.exit_code == 0
 
-    def test_evaluate_without_bench_errors(self):
-        result = runner.invoke(app, ["orchestrator", "evaluate", "--content", "Test"])
+    def test_query_without_bench_errors(self):
+        result = runner.invoke(app, ["orchestrator", "query", "--content", "Test"])
         assert result.exit_code != 0
 
-    def test_evaluate_without_content_errors(self):
-        result = runner.invoke(app, ["orchestrator", "evaluate", "--bench", "7xKXtg"])
+    def test_query_without_content_errors(self):
+        result = runner.invoke(app, ["orchestrator", "query", "--bench", "7xKXtg"])
         assert result.exit_code != 0
 
 

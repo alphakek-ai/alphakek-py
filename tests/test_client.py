@@ -124,12 +124,14 @@ class TestSubmissionResource:
 
 class TestOrchestratorResource:
     @respx.mock
-    def test_evaluate(self, client: Client, base_url: str):
+    def test_query(self, client: Client, base_url: str):
         respx.post(f"{base_url}/v1/orchestrator/query").mock(
-            return_value=httpx.Response(200, json={"score": 0.85, "tldr": "Good", "lp_cost": 10.0})
+            return_value=httpx.Response(
+                200, json={"results": [], "usage": {"lambda_cost": 0.1, "lambda_remaining": 99.9}}
+            )
         )
-        result = client.orchestrator.evaluate(bench="7xKXtg", content="Test content")
-        assert result["score"] == 0.85
+        result = client.orchestrator.query(candidates=["Test content"], tokens=["7xKXtg"])
+        assert "usage" in result
 
     @respx.mock
     def test_list(self, client: Client, base_url: str):
