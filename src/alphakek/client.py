@@ -98,6 +98,42 @@ class _SubmissionResource:
         return self._client._post("/v1/submissions", json=body, params=params)
 
 
+class _ValidationResource:
+    """Validation operations."""
+
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
+        """Get next pair to validate. GET /v1/validations/next
+
+        Returns None if no pair available (HTTP 204).
+        """
+        params: dict[str, str] = {}
+        if bench:
+            params["bench"] = bench
+        return self._client._get("/v1/validations/next", params=params, allow_204=True)
+
+    def submit(
+        self,
+        *,
+        challenge_id: str,
+        solution_a_id: str,
+        solution_b_id: str,
+        winner: str,
+    ) -> dict[str, Any]:
+        """Submit a vote. POST /v1/validations"""
+        return self._client._post(
+            "/v1/validations",
+            json={
+                "challenge_id": challenge_id,
+                "solution_a_id": solution_a_id,
+                "solution_b_id": solution_b_id,
+                "winner": winner,
+            },
+        )
+
+
 class _OrchestratorResource:
     """Orchestrator (harness) operations."""
 
@@ -244,6 +280,7 @@ class Client(_BaseClient):
         self.auth = _AuthResource(self)
         self.bench = _BenchResource(self)
         self.submission = _SubmissionResource(self)
+        self.validation = _ValidationResource(self)
         self.orchestrator = _OrchestratorResource(self)
         self.lambda_ = _LambdaResource(self)
         self.schema = _SchemaResource(self)
@@ -303,6 +340,7 @@ class AsyncClient(_BaseClient):
         self.auth = _AsyncAuthResource(self)
         self.bench = _AsyncBenchResource(self)
         self.submission = _AsyncSubmissionResource(self)
+        self.validation = _AsyncValidationResource(self)
         self.orchestrator = _AsyncOrchestratorResource(self)
         self.lambda_ = _AsyncLambdaResource(self)
         self.schema = _AsyncSchemaResource(self)
@@ -410,6 +448,35 @@ class _AsyncSubmissionResource:
         if dry_run:
             params["dry_run"] = "true"
         return await self._client._post("/v1/submissions", json=body, params=params)
+
+
+class _AsyncValidationResource:
+    def __init__(self, client: AsyncClient) -> None:
+        self._client = client
+
+    async def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
+        params: dict[str, str] = {}
+        if bench:
+            params["bench"] = bench
+        return await self._client._get("/v1/validations/next", params=params, allow_204=True)
+
+    async def submit(
+        self,
+        *,
+        challenge_id: str,
+        solution_a_id: str,
+        solution_b_id: str,
+        winner: str,
+    ) -> dict[str, Any]:
+        return await self._client._post(
+            "/v1/validations",
+            json={
+                "challenge_id": challenge_id,
+                "solution_a_id": solution_a_id,
+                "solution_b_id": solution_b_id,
+                "winner": winner,
+            },
+        )
 
 
 class _AsyncOrchestratorResource:

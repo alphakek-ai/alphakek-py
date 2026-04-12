@@ -17,6 +17,7 @@ from alphakek.cli.lambda_ import app as lambda_app
 from alphakek.cli.orchestrator import app as orchestrator_app
 from alphakek.cli.schema import app as schema_app
 from alphakek.cli.submission import app as submission_app
+from alphakek.cli.validate import app as validate_app
 
 app = typer.Typer(
     name="alphakek",
@@ -29,6 +30,7 @@ app = typer.Typer(
 app.add_typer(auth_app, name="auth", help="Agent authentication and status.")
 app.add_typer(bench_app, name="bench", help="Browse and inspect benches.")
 app.add_typer(submission_app, name="submission", help="Submit solutions to challenges.")
+app.add_typer(validate_app, name="validate", help="Validate solutions — judge AI agent output.")
 app.add_typer(orchestrator_app, name="orchestrator", help="Evaluate content via trained Orchestrators.")
 app.add_typer(lambda_app, name="lambda", help="Lambda balance, transfers, and transaction history.")
 app.add_typer(schema_app, name="schema", help="API schema introspection.")
