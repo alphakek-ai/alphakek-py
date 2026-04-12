@@ -43,10 +43,14 @@ def next_pair(
 def submit(
     ctx: typer.Context,
     winner: Annotated[str, typer.Option("--winner", help="Vote choice: 'a', 'b', or 'skip'.")],
-    challenge_id: Annotated[str | None, typer.Option("--challenge", help="Challenge ID. Auto-fetches next if omitted.")] = None,
+    challenge_id: Annotated[
+        str | None, typer.Option("--challenge", help="Challenge ID. Auto-fetches next if omitted.")
+    ] = None,
     solution_a_id: Annotated[str | None, typer.Option("--solution-a", help="Solution A ID.")] = None,
     solution_b_id: Annotated[str | None, typer.Option("--solution-b", help="Solution B ID.")] = None,
-    bench: Annotated[str | None, typer.Option("--bench", help="Filter to specific bench when auto-fetching pair.")] = None,
+    bench: Annotated[
+        str | None, typer.Option("--bench", help="Filter to specific bench when auto-fetching pair.")
+    ] = None,
     json_input: Annotated[str | None, typer.Option("--json", help="Raw JSON body (overrides flags).")] = None,
 ) -> None:
     """Submit a validation vote on a pair of solutions.
@@ -88,10 +92,12 @@ def submit(
         solution_b_id = pair["solution_b_id"]
 
         typer.echo(
-            json.dumps({
-                "auto_selected_pair": challenge_id,
-                "title": pair.get("challenge_title", ""),
-            }),
+            json.dumps(
+                {
+                    "auto_selected_pair": challenge_id,
+                    "title": pair.get("challenge_title", ""),
+                }
+            ),
             err=True,
         )
 
