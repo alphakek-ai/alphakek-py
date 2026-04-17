@@ -4,9 +4,24 @@ import json
 from unittest.mock import MagicMock, patch
 
 import httpx
+import pytest
 from typer.testing import CliRunner
 
 from alphakek.cli.main import app
+
+
+def _has_solders() -> bool:
+    try:
+        import solders  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+# Tests that patch `alphakek.signing.*` require the optional `solana` extra —
+# `alphakek.signing` imports solders at module load. Without the extra, CI's
+# `uv sync --locked` skips solders, so these patches can't resolve.
+requires_solana = pytest.mark.skipif(not _has_solders(), reason="requires 'solana' extra (solders)")
 
 runner = CliRunner()
 
@@ -112,6 +127,7 @@ class TestAuthLinkWallet:
         assert result.exit_code == 0
         mock_client.auth.status.assert_not_called()
 
+    @requires_solana
     @patch("alphakek.signing.sign_link_message")
     @patch("alphakek.signing.load_keypair")
     @patch("alphakek.cli.main._make_client")
@@ -132,6 +148,7 @@ class TestAuthLinkWallet:
         mock_load.assert_called_once_with("SECRET_FROM_STDIN")
         mock_client.auth.link_wallet.assert_called_once_with(wallet_address="DerivedPubkey", signature="SigFromKeypair")
 
+    @requires_solana
     @patch("alphakek.signing.sign_link_message")
     @patch("alphakek.signing.load_keypair")
     @patch("alphakek.cli.main._make_client")
