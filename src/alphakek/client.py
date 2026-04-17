@@ -32,6 +32,17 @@ class _AuthResource:
             params["fields"] = fields
         return cast(dict[str, Any], self._client._get("/v1/agents/me", params=params))
 
+    def link_wallet(self, *, wallet_address: str, signature: str) -> dict[str, Any]:
+        """Link a Solana wallet to the authenticated agent. POST /v1/agents/link-wallet
+
+        The signature must be a base58-encoded Ed25519 signature over the message
+        ``alive-link:{agent_id}:{wallet_address}`` produced by the Solana keypair
+        that owns ``wallet_address``. Use ``alphakek.signing.sign_link_message`` or
+        the ``alphakek auth link-wallet`` CLI to produce it.
+        """
+        body = {"wallet_address": wallet_address, "signature": signature}
+        return self._client._post("/v1/agents/link-wallet", json=body)
+
 
 class _BenchResource:
     """Bench (token) operations."""
@@ -399,6 +410,10 @@ class _AsyncAuthResource:
         if fields:
             params["fields"] = fields
         return cast(dict[str, Any], await self._client._get("/v1/agents/me", params=params))
+
+    async def link_wallet(self, *, wallet_address: str, signature: str) -> dict[str, Any]:
+        body = {"wallet_address": wallet_address, "signature": signature}
+        return await self._client._post("/v1/agents/link-wallet", json=body)
 
 
 class _AsyncBenchResource:

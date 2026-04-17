@@ -4,9 +4,24 @@ import json
 from unittest.mock import MagicMock, patch
 
 import httpx
+import pytest
 from typer.testing import CliRunner
 
 from alphakek.cli.main import app
+
+
+def _has_solders() -> bool:
+    try:
+        import solders  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+# Tests that patch `alphakek.signing.*` require the optional `solana` extra —
+# `alphakek.signing` imports solders at module load. Without the extra, CI's
+# `uv sync --locked` skips solders, so these patches can't resolve.
+requires_solana = pytest.mark.skipif(not _has_solders(), reason="requires 'solana' extra (solders)")
 
 runner = CliRunner()
 
@@ -60,6 +75,94 @@ class TestAuthStatus:
         assert result.exit_code == 0
         data = json.loads(result.stdout)
         assert data["status"] == "claimed"
+
+
+class TestAuthLinkWallet:
+    def test_requires_key_or_signature(self):
+        result = runner.invoke(app, ["auth", "link-wallet"])
+        assert result.exit_code != 0
+        # _error writes JSON error to stderr and exits nonzero. CliRunner captures
+        # combined output on .output in recent Typer/Click. Assert on exit code.
+
+    def test_signature_requires_wallet_address(self):
+        result = runner.invoke(app, ["auth", "link-wallet", "--signature", "sig123"])
+        assert result.exit_code != 0
+
+    @patch("alphakek.cli.main._make_client")
+    def test_link_with_precomputed_signature(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"agent": {"id": "abc-123"}}
+        mock_client.auth.link_wallet.return_value = {"wallet_address": "SoLPubkey"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            ["auth", "link-wallet", "--wallet-address", "SoLPubkey", "--signature", "SigBase58"],
+        )
+        assert result.exit_code == 0
+        mock_client.auth.link_wallet.assert_called_once_with(wallet_address="SoLPubkey", signature="SigBase58")
+        data = json.loads(result.stdout)
+        assert data["wallet_address"] == "SoLPubkey"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_link_uses_explicit_agent_id(self, mock_make):
+        # When --agent-id is passed, no /v1/agents/me round trip.
+        mock_client = MagicMock()
+        mock_client.auth.link_wallet.return_value = {"wallet_address": "SoLPubkey"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            [
+                "auth",
+                "link-wallet",
+                "--wallet-address",
+                "SoLPubkey",
+                "--signature",
+                "SigBase58",
+                "--agent-id",
+                "explicit-id",
+            ],
+        )
+        assert result.exit_code == 0
+        mock_client.auth.status.assert_not_called()
+
+    @requires_solana
+    @patch("alphakek.signing.sign_link_message")
+    @patch("alphakek.signing.load_keypair")
+    @patch("alphakek.cli.main._make_client")
+    def test_link_reads_private_key_from_stdin(self, mock_make, mock_load, mock_sign):
+        mock_client = MagicMock()
+        mock_client.auth.link_wallet.return_value = {"wallet_address": "DerivedPubkey"}
+        mock_make.return_value = mock_client
+        mock_load.return_value = MagicMock()
+        mock_sign.return_value = ("DerivedPubkey", "SigFromKeypair")
+
+        # '-' must read from stdin and not pollute argv.
+        result = runner.invoke(
+            app,
+            ["auth", "link-wallet", "--private-key", "-", "--agent-id", "abc-123"],
+            input="SECRET_FROM_STDIN\n",
+        )
+        assert result.exit_code == 0
+        mock_load.assert_called_once_with("SECRET_FROM_STDIN")
+        mock_client.auth.link_wallet.assert_called_once_with(wallet_address="DerivedPubkey", signature="SigFromKeypair")
+
+    @requires_solana
+    @patch("alphakek.signing.sign_link_message")
+    @patch("alphakek.signing.load_keypair")
+    @patch("alphakek.cli.main._make_client")
+    def test_link_reads_private_key_from_env(self, mock_make, mock_load, mock_sign, monkeypatch):
+        mock_client = MagicMock()
+        mock_client.auth.link_wallet.return_value = {"wallet_address": "DerivedPubkey"}
+        mock_make.return_value = mock_client
+        mock_load.return_value = MagicMock()
+        mock_sign.return_value = ("DerivedPubkey", "SigFromKeypair")
+
+        monkeypatch.setenv("ALPHAKEK_SIGNING_KEY", "SECRET_FROM_ENV")
+        result = runner.invoke(app, ["auth", "link-wallet", "--agent-id", "abc-123"])
+        assert result.exit_code == 0
+        mock_load.assert_called_once_with("SECRET_FROM_ENV")
 
 
 class TestBenchList:
