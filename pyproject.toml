@@ -23,6 +23,12 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 
+[project.optional-dependencies]
+# Needed only for `alphakek auth link-wallet` to sign the message locally.
+# Without this extra, you can still link a wallet by passing a pre-computed
+# --signature produced by any Solana Ed25519 signer.
+solana = ["solders>=0.20"]
+
 [project.urls]
 Homepage = "https://github.com/alphakek-ai/alphakek-py"
 Repository = "https://github.com/alphakek-ai/alphakek-py"

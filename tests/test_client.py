@@ -57,6 +57,21 @@ class TestAuthResource:
         assert route.called
         assert "fields=status%2Clp_balance" in str(route.calls[0].request.url)
 
+    @respx.mock
+    def test_link_wallet(self, client: Client, base_url: str):
+        route = respx.post(f"{base_url}/v1/agents/link-wallet").mock(
+            return_value=httpx.Response(200, json={"wallet_address": "SoLWalletPubkey11111111111111111111111111111"})
+        )
+        result = client.auth.link_wallet(
+            wallet_address="SoLWalletPubkey11111111111111111111111111111",
+            signature="SigBase58Here",
+        )
+        assert route.called
+        body = respx.calls.last.request.content.decode()
+        assert "SoLWalletPubkey" in body
+        assert "SigBase58Here" in body
+        assert result["wallet_address"].startswith("SoL")
+
 
 class TestBenchResource:
     @respx.mock
