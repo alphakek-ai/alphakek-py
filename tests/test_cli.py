@@ -165,6 +165,119 @@ class TestAuthLinkWallet:
         mock_load.assert_called_once_with("SECRET_FROM_ENV")
 
 
+class TestGlobalPluck:
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_scalar_prints_raw(self, mock_make):
+        # --pluck id should print the scalar without JSON quotes.
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"id": "abc-123", "status": "claimed"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "id", "auth", "status"])
+        assert result.exit_code == 0
+        assert result.stdout.strip() == "abc-123"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_nested_path(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"agent": {"id": "abc-123", "name": "A2"}}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "agent.name", "auth", "status"])
+        assert result.exit_code == 0
+        assert result.stdout.strip() == "A2"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_list_index(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.bench.list.return_value = {
+            "data": [{"token_address": "TOK_A"}, {"token_address": "TOK_B"}],
+            "has_more": False,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "data.0.token_address", "bench", "list"])
+        assert result.exit_code == 0
+        assert result.stdout.strip() == "TOK_A"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_bool_prints_lowercase(self, mock_make):
+        # Shell-idiomatic true/false (not Python's True/False or JSON's true/false quoted).
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"wallet_linked": True}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "wallet_linked", "auth", "status"])
+        assert result.exit_code == 0
+        assert result.stdout.strip() == "true"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_nonscalar_prints_compact_json(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"agent": {"id": "abc", "name": "A"}}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "agent", "auth", "status"])
+        assert result.exit_code == 0
+        # Not indented (compact) — pluck is for scripting, not display.
+        assert result.stdout.strip() == '{"id": "abc", "name": "A"}'
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_missing_key_exits_3(self, mock_make):
+        # Exit 3 is distinct from 1 (error) so scripts can detect schema drift.
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"status": "claimed"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "nonexistent", "auth", "status"])
+        assert result.exit_code == 3
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_deep_missing_exits_3(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.auth.status.return_value = {"agent": {"id": "abc"}}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "agent.missing.deeper", "auth", "status"])
+        assert result.exit_code == 3
+
+    @patch("alphakek.cli.main._make_client")
+    def test_pluck_index_out_of_range_exits_3(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.bench.list.return_value = {"data": [{"x": 1}], "has_more": False}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["--pluck", "data.5.x", "bench", "list"])
+        assert result.exit_code == 3
+
+
+class TestValidateNextExitCode:
+    @patch("alphakek.cli.main._make_client")
+    def test_next_pair_none_returns_null_exit_2(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.validation.next_pair.return_value = None
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["validate", "next"])
+        assert result.exit_code == 2
+        assert result.stdout.strip() == "null"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_next_pair_success_exit_0(self, mock_make):
+        mock_client = MagicMock()
+        mock_client.validation.next_pair.return_value = {
+            "challenge_id": "c1",
+            "solution_a_id": "sa",
+            "solution_b_id": "sb",
+            "solution_a_text": "...",
+            "solution_b_text": "...",
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["validate", "next"])
+        assert result.exit_code == 0
+
+
 class TestBenchList:
     @patch("alphakek.cli.main._make_client")
     def test_list_benches(self, mock_make):
@@ -225,13 +338,14 @@ class TestSubmissionNextChallenge:
         mock_client.submission.next_challenge.assert_called_once_with(bench="7xKXtg")
 
     @patch("alphakek.cli.main._make_client")
-    def test_next_challenge_none_returns_null_exit_1(self, mock_make):
+    def test_next_challenge_none_returns_null_exit_2(self, mock_make):
+        # Exit code 2 = "no data available" (empty queue) — distinct from 1 = error.
         mock_client = MagicMock()
         mock_client.submission.next_challenge.return_value = None
         mock_make.return_value = mock_client
 
         result = runner.invoke(app, ["submission", "next-challenge"])
-        assert result.exit_code == 1
+        assert result.exit_code == 2
         assert result.stdout.strip() == "null"
 
     @patch("alphakek.cli.main._make_client")

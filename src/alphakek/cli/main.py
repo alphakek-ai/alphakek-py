@@ -37,11 +37,77 @@ app.add_typer(schema_app, name="schema", help="API schema introspection.")
 
 
 def _output(data: dict | list | None, pretty: bool = True) -> None:
-    """Print JSON output to stdout."""
+    """Print JSON output to stdout.
+
+    If the active Typer context set ``--pluck <dotted.path>`` via the top-level
+    callback, emit only the extracted value (scalars printed raw, without JSON
+    quoting). Missing paths exit 3 with an error on stderr — distinct from the
+    generic error exit code so scripts can detect schema drift.
+    """
     if data is None:
+        return
+    pluck = _current_pluck()
+    if pluck:
+        _emit_plucked(data, pluck)
         return
     indent = 2 if pretty else None
     typer.echo(json.dumps(data, indent=indent, default=str))
+
+
+def _current_pluck() -> str | None:
+    """Return the --pluck path set on the active context, if any."""
+    try:
+        ctx = typer.Context.current()  # type: ignore[attr-defined]
+    except (AttributeError, RuntimeError):
+        # typer < 0.12 / no active context
+        import click
+
+        ctx = click.get_current_context(silent=True)
+        if ctx is None:
+            return None
+    obj = getattr(ctx, "obj", None) or {}
+    return obj.get("pluck") if isinstance(obj, dict) else None
+
+
+def _emit_plucked(data: dict | list, path: str) -> None:
+    """Walk a dotted path into ``data`` and emit the terminal value.
+
+    Scalars (str/int/float/bool/None) print raw, one per line. Lists and dicts
+    print as compact JSON. Missing keys or indexes exit with code 3.
+    """
+    cursor: object = data
+    for segment in path.split("."):
+        if isinstance(cursor, list):
+            try:
+                cursor = cursor[int(segment)]
+            except (ValueError, IndexError):
+                _error(f"--pluck: path '{path}' does not resolve (stopped at list index '{segment}').", status=3)
+        elif isinstance(cursor, dict):
+            if segment not in cursor:
+                _error(f"--pluck: path '{path}' does not resolve (key '{segment}' missing).", status=3)
+            cursor = cursor[segment]
+        else:
+            _error(
+                f"--pluck: path '{path}' does not resolve (reached a scalar before consuming '{segment}').",
+                status=3,
+            )
+    if cursor is None:
+        return
+    if isinstance(cursor, bool):
+        typer.echo("true" if cursor else "false")
+    elif isinstance(cursor, (str, int, float)):
+        typer.echo(str(cursor))
+    else:
+        typer.echo(json.dumps(cursor, default=str))
+
+
+# Exit codes used by commands that may return "no data available" distinct from errors:
+#   0 = success with data
+#   1 = generic error (auth/network/API)
+#   2 = no data available (empty queue, 204 No Content) — an expected state, not an error
+#   3 = --pluck path did not resolve
+EXIT_NO_DATA = 2
+EXIT_PLUCK_MISS = 3
 
 
 def _error(message: str, *, status: int = 1) -> NoReturn:
@@ -95,11 +161,28 @@ def main(
     base_url: Annotated[
         str | None, typer.Option("--base-url", envvar="ALPHAKEK_BASE_URL", help="API base URL override.")
     ] = None,
+    pluck: Annotated[
+        str | None,
+        typer.Option(
+            "--pluck",
+            help=(
+                "Extract a single value from the JSON response, printed raw. "
+                "Supports dotted paths and list indexes, e.g. --pluck id, --pluck agent.id, --pluck data.0.token_address. "
+                "Missing path exits 3. Scalars print without JSON quotes; lists/dicts print as compact JSON."
+            ),
+        ),
+    ] = None,
 ) -> None:
-    """AIKEK CLI — compete in AI agent benchmarks."""
+    """AIKEK CLI — compete in AI agent benchmarks.
+
+    Exit codes: 0 = success, 1 = error, 2 = no data available (e.g. empty
+    challenge queue — distinct from errors so scripts can distinguish),
+    3 = --pluck path did not resolve in the response.
+    """
     ctx.ensure_object(dict)
     ctx.obj["api_key"] = api_key
     ctx.obj["base_url"] = base_url
+    ctx.obj["pluck"] = pluck
 
 
 @app.command()
@@ -107,4 +190,4 @@ def version() -> None:
     """Print CLI version."""
     from alphakek import __version__
 
-    typer.echo(json.dumps({"version": __version__}))
+    _output({"version": __version__})

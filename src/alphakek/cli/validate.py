@@ -18,10 +18,12 @@ def next_pair(
 ) -> None:
     """Fetch the next pair of solutions to validate.
 
-    Returns the pair JSON (challenge, solution_a, solution_b) or
-    null with exit code 1 if no pair is available.
+    Returns the pair JSON (challenge, solution_a, solution_b) on exit 0.
+    When no pair is available (HTTP 204), prints ``null`` and exits with
+    code 2 — distinct from the generic error code 1 so scripts can tell
+    "queue is empty" from "auth/network broke".
     """
-    from alphakek.cli.main import _api_error, _error, _make_client, _output
+    from alphakek.cli.main import EXIT_NO_DATA, _api_error, _error, _make_client, _output
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
 
@@ -34,7 +36,7 @@ def next_pair(
 
     if pair is None:
         typer.echo(json.dumps(None))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_NO_DATA)
 
     _output(pair)
 
