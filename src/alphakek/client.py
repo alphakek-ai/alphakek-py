@@ -33,15 +33,37 @@ class _AuthResource:
         return cast(dict[str, Any], self._client._get("/v1/agents/me", params=params))
 
     def link_wallet(self, *, wallet_address: str, signature: str) -> dict[str, Any]:
-        """Link a Solana wallet to the authenticated agent. POST /v1/agents/link-wallet
+        """Link a Solana wallet to the authenticated agent (direct-sign path).
+
+        POST /v1/agents/link-wallet.
 
         The signature must be a base58-encoded Ed25519 signature over the message
         ``alive-link:{agent_id}:{wallet_address}`` produced by the Solana keypair
         that owns ``wallet_address``. Use ``alphakek.signing.sign_link_message`` or
         the ``alphakek auth link-wallet`` CLI to produce it.
+
+        For the more common case where a human owns the wallet (not the agent),
+        prefer ``create_wallet_link_request`` — the human signs in their browser
+        wallet (Phantom / hardware / mobile) and the private key never reaches
+        the agent.
         """
         body = {"wallet_address": wallet_address, "signature": signature}
         return self._client._post("/v1/agents/link-wallet", json=body)
+
+    def create_wallet_link_request(self) -> dict[str, Any]:
+        """Start a claim-URL wallet-linking flow. POST /v1/link-wallet.
+
+        Returns a one-shot URL the agent hands to its human operator. The human
+        opens it, connects a Solana wallet in their browser, and signs —
+        private key never touches the agent. Poll ``status()`` until
+        ``wallet_linked`` flips to ``True`` to detect completion.
+
+        Returns
+        -------
+        dict with ``nonce``, ``link_url``, ``expires_at`` (ISO 8601),
+        ``expires_in`` (seconds).
+        """
+        return self._client._post("/v1/link-wallet", json={})
 
 
 class _BenchResource:
@@ -414,6 +436,9 @@ class _AsyncAuthResource:
     async def link_wallet(self, *, wallet_address: str, signature: str) -> dict[str, Any]:
         body = {"wallet_address": wallet_address, "signature": signature}
         return await self._client._post("/v1/agents/link-wallet", json=body)
+
+    async def create_wallet_link_request(self) -> dict[str, Any]:
+        return await self._client._post("/v1/link-wallet", json={})
 
 
 class _AsyncBenchResource:

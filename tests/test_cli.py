@@ -78,14 +78,80 @@ class TestAuthStatus:
 
 
 class TestAuthLinkWallet:
-    def test_requires_key_or_signature(self):
-        result = runner.invoke(app, ["auth", "link-wallet"])
-        assert result.exit_code != 0
-        # _error writes JSON error to stderr and exits nonzero. CliRunner captures
-        # combined output on .output in recent Typer/Click. Assert on exit code.
+    @patch("alphakek.cli.main._make_client")
+    def test_no_flags_starts_web_flow(self, mock_make):
+        """No flags → POST /v1/link-wallet, print link_url, poll until wallet_linked."""
+        mock_client = MagicMock()
+        mock_client.auth.create_wallet_link_request.return_value = {
+            "nonce": "wl_abc",
+            "link_url": "https://app.alphakek.ai/link-wallet/wl_abc",
+            "expires_at": "2026-04-19T16:00:00+00:00",
+            "expires_in": 900,
+        }
+        # First poll: not yet linked. Second poll: linked.
+        mock_client.auth.status.side_effect = [
+            {"agent": {"id": "abc-123", "wallet_linked": False}},
+            {"agent": {"id": "abc-123", "wallet_linked": True, "wallet_address": "SoLPubkey"}},
+        ]
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            ["auth", "link-wallet", "--poll-interval", "0"],
+        )
+        assert result.exit_code == 0, result.output
+        # The SDK was used the right way: POST /v1/link-wallet then poll status.
+        mock_client.auth.create_wallet_link_request.assert_called_once_with()
+        assert mock_client.auth.status.call_count >= 2
+        # stdout is the final JSON; stderr had the URL + waiting prompt.
+        data = json.loads(result.stdout)
+        assert data["wallet_address"] == "SoLPubkey"
+        assert data["agent_id"] == "abc-123"
+
+    @patch("alphakek.cli.main._make_client")
+    def test_no_flags_no_wait_prints_url_and_exits(self, mock_make):
+        """--no-wait skips polling — useful for scripts that want the URL only."""
+        mock_client = MagicMock()
+        mock_client.auth.create_wallet_link_request.return_value = {
+            "nonce": "wl_xyz",
+            "link_url": "https://app.alphakek.ai/link-wallet/wl_xyz",
+            "expires_at": "2026-04-19T16:00:00+00:00",
+            "expires_in": 900,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(app, ["auth", "link-wallet", "--no-wait"])
+        assert result.exit_code == 0
+        mock_client.auth.status.assert_not_called()
+        data = json.loads(result.stdout)
+        assert data["link_url"].endswith("wl_xyz")
+
+    @patch("alphakek.cli.main._make_client")
+    def test_no_flags_times_out_if_human_never_signs(self, mock_make):
+        """--poll-timeout 0 → don't poll, surface a timeout error (exit 2)."""
+        mock_client = MagicMock()
+        mock_client.auth.create_wallet_link_request.return_value = {
+            "nonce": "wl_xyz",
+            "link_url": "https://app.alphakek.ai/link-wallet/wl_xyz",
+            "expires_at": "2026-04-19T16:00:00+00:00",
+            "expires_in": 900,
+        }
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            ["auth", "link-wallet", "--poll-timeout", "0", "--poll-interval", "0"],
+        )
+        assert result.exit_code == 2  # distinct "no data / timeout" exit
+        mock_client.auth.status.assert_not_called()
 
     def test_signature_requires_wallet_address(self):
         result = runner.invoke(app, ["auth", "link-wallet", "--signature", "sig123"])
+        assert result.exit_code != 0
+
+    def test_wallet_address_without_signature_errors(self):
+        """--wallet-address alone is meaningless (previously silently ignored)."""
+        result = runner.invoke(app, ["auth", "link-wallet", "--wallet-address", "SoLPubkey"])
         assert result.exit_code != 0
 
     @patch("alphakek.cli.main._make_client")

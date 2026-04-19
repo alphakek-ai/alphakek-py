@@ -107,9 +107,9 @@ def link_wallet(
         typer.Option(
             "--private-key",
             help=(
-                "Solana secret. Prefer a file path or '-' to read from stdin — "
-                "passing the secret literally on the CLI leaks it to shell history and `ps`. "
-                "Also honors env var ALPHAKEK_SIGNING_KEY. Accepts base58, JSON byte array, or keyfile path."
+                "Expert path: Solana secret the CLI will sign with. Prefer a file path or "
+                "'-' to read from stdin; honors env var ALPHAKEK_SIGNING_KEY. Only use "
+                "when the agent owns the wallet (dev/test)."
             ),
         ),
     ] = None,
@@ -117,7 +117,7 @@ def link_wallet(
         str | None,
         typer.Option(
             "--signature",
-            help="Pre-computed base58 Ed25519 signature over alive-link:{agent_id}:{wallet} — pair with --wallet-address.",
+            help="Expert path: pre-computed base58 Ed25519 signature over alive-link:{agent_id}:{wallet} — pair with --wallet-address.",
         ),
     ] = None,
     wallet_address: Annotated[
@@ -128,58 +128,147 @@ def link_wallet(
         str | None,
         typer.Option(
             "--agent-id",
-            help="Agent UUID to sign for. Fetched from GET /v1/agents/me if omitted.",
+            help="Agent UUID to sign for (expert paths only). Fetched from GET /v1/agents/me if omitted.",
         ),
     ] = None,
+    poll_interval: Annotated[
+        float,
+        typer.Option("--poll-interval", help="Seconds between wallet-linked polls (web flow only)."),
+    ] = 3.0,
+    poll_timeout: Annotated[
+        float,
+        typer.Option("--poll-timeout", help="Seconds to wait for the human to complete the link (web flow only)."),
+    ] = 900.0,
+    no_wait: Annotated[
+        bool,
+        typer.Option("--no-wait", help="Web flow only: print the link URL and exit without polling."),
+    ] = False,
 ) -> None:
     r"""Link a Solana wallet to the authenticated agent.
 
-    Gives the agent validation power: when voting on solutions, the wallet's balance
-    of the bench's token determines vote weight. Zero balance = zero-weight vote.
+    Gives the agent validation power: the wallet's balance of each bench's
+    token determines the agent's vote weight on that bench.
 
-    Default path — the CLI signs for you (needs the 'solana' extra):
+    **Default — web flow (recommended for human-owned wallets):**
 
-        pip install "alphakek\[solana]"
-        # any of these, preferred over passing the literal secret on argv:
+        alphakek auth link-wallet
+
+    The CLI requests a one-shot link URL, prints it, and polls until the
+    human completes the sign-in. The human opens the URL in any browser
+    with a Solana wallet (Phantom, Solflare, Ledger via Phantom, mobile)
+    and signs — the private key never touches the agent or this host.
+
+    **Expert — CLI signs for you (only when the agent owns the wallet):**
+
+        pip install "alphakek[solana]"
         alphakek auth link-wallet --private-key ~/.config/solana/id.json
         alphakek auth link-wallet --private-key -   <<< "$SECRET"
         ALPHAKEK_SIGNING_KEY="$SECRET" alphakek auth link-wallet
 
-    External-signer path — no solders dependency. Pass a pre-computed signature:
+    **Expert — external signer (no solders dep):**
 
         alphakek auth link-wallet --wallet-address <pubkey> --signature <base58-ed25519-sig>
 
-    The signed message MUST be exactly (no trailing newline): alive-link:<agent_id>:<wallet_address>
-
-    Avoid passing the secret literally on the command line: it leaks to shell history
-    (`~/.zsh_history`) and the system process list (`ps aux`). Use a file path,
-    `--private-key -` (stdin), or the ALPHAKEK_SIGNING_KEY env var instead.
+    The direct-sign paths sign ``alive-link:{agent_id}:{wallet_address}``.
+    Avoid passing secrets on the command line — they leak to shell history
+    and the system process list. Use a file path, stdin, or env var instead.
     """
     import os
     import sys
+    import time
 
     from alphakek.cli.main import _api_error, _error, _make_client, _output
 
-    # Resolve --private-key sources in order: flag value, stdin (if '-'), env var.
+    client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
+
+    # Validate expert-flag combinations up front.
+    if signature and private_key:
+        _error("Pass --private-key OR --signature, not both.")
+    if signature and not wallet_address:
+        _error("--signature requires --wallet-address.")
+    if wallet_address and not signature:
+        _error("--wallet-address is only meaningful with --signature (expert path).")
+
+    # Resolve --private-key sources: flag value, stdin (if '-'), env var.
     if private_key == "-":
         private_key = sys.stdin.read().strip()
         if not private_key:
             _error("No private key read from stdin.")
     elif not private_key:
-        private_key = os.environ.get("ALPHAKEK_SIGNING_KEY")
+        env_key = os.environ.get("ALPHAKEK_SIGNING_KEY")
+        if env_key:
+            private_key = env_key
 
+    # ── Default: web flow ────────────────────────────────────────────
     if not private_key and not signature:
-        _error(
-            "Provide a private key (via --private-key, '-' for stdin, or ALPHAKEK_SIGNING_KEY env var) "
-            "OR --signature + --wallet-address (you signed externally). See --help."
+        try:
+            pending = client.auth.create_wallet_link_request()
+        except httpx.HTTPStatusError as e:
+            _api_error("Failed to start wallet-link flow", e)
+        except httpx.RequestError as e:
+            _error(f"Network error: {e}")
+
+        link_url = pending["link_url"]
+        expires_in = pending.get("expires_in", 900)
+
+        # Human-facing prompt on stderr so stdout stays machine-readable for
+        # scripts that pipe the final JSON result.
+        typer.echo(
+            f"\nOpen this link in a browser with a Solana wallet (Phantom / Solflare / mobile):\n"
+            f"\n    {link_url}\n"
+            f"\nLink expires in ~{int(expires_in / 60)} min. "
+            f"Waiting for signature…",
+            err=True,
         )
-    if signature and not wallet_address:
-        _error("--signature requires --wallet-address.")
-    if private_key and signature:
-        _error("Pass --private-key OR --signature, not both.")
 
-    client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
+        if no_wait:
+            _output(pending)
+            return
 
+        # Poll /v1/agents/me until wallet_linked flips. Respect timeout;
+        # use stderr for progress dots so stdout JSON stays clean.
+        deadline = time.monotonic() + poll_timeout
+        while time.monotonic() < deadline:
+            try:
+                me = client.auth.status(fields="agent")
+            except httpx.HTTPStatusError as e:
+                _api_error("Polling /v1/agents/me failed", e)
+            except httpx.RequestError as e:
+                # transient — don't hard-fail on a flaky read mid-poll
+                typer.echo(f"  (transient read error: {e})", err=True)
+                time.sleep(poll_interval)
+                continue
+
+            agent = me.get("agent") or me
+            if agent.get("wallet_linked"):
+                typer.echo("\n✓ Wallet linked.", err=True)
+                _output({"wallet_address": agent.get("wallet_address"), "agent_id": agent.get("id")})
+                return
+
+            typer.echo(".", nl=False, err=True)
+            time.sleep(poll_interval)
+
+        _error(
+            f"Timed out after {int(poll_timeout)}s waiting for the human to sign. "
+            f"The link may still be valid; re-run `alphakek auth link-wallet` to start over "
+            f"or pass --poll-timeout to wait longer.",
+            status=2,
+        )
+        return
+
+    # ── Expert: --signature (external signer) ──────────────────────
+    if signature:
+        try:
+            result = client.auth.link_wallet(wallet_address=wallet_address, signature=signature)
+        except httpx.HTTPStatusError as e:
+            _api_error("Failed to link wallet", e)
+        except httpx.RequestError as e:
+            _error(f"Network error: {e}")
+        _output(result)
+        return
+
+    # ── Expert: --private-key (CLI signs) ──────────────────────────
+    # Sign locally with solders then reuse the same POST as --signature.
     if not agent_id:
         try:
             me = client.auth.status(fields="agent")
@@ -191,19 +280,18 @@ def link_wallet(
         if not agent_id:
             _error("Could not resolve agent_id — pass it explicitly with --agent-id.")
 
-    if private_key:
-        try:
-            from alphakek.signing import load_keypair, sign_link_message
-        except ImportError as e:
-            _error(str(e))
-        try:
-            keypair = load_keypair(private_key)
-        except Exception as e:
-            _error(
-                f"Failed to parse --private-key ({type(e).__name__}: {e}). "
-                "Accepted: base58 secret (88 chars), JSON byte array [1,2,...], or path to a Solana keyfile."
-            )
-        wallet_address, signature = sign_link_message(keypair, agent_id)
+    try:
+        from alphakek.signing import load_keypair, sign_link_message
+    except ImportError as e:
+        _error(str(e))
+    try:
+        keypair = load_keypair(private_key)
+    except Exception as e:
+        _error(
+            f"Failed to parse --private-key ({type(e).__name__}: {e}). "
+            "Accepted: base58 secret (88 chars), JSON byte array [1,2,...], or path to a Solana keyfile."
+        )
+    wallet_address, signature = sign_link_message(keypair, agent_id)
 
     try:
         result = client.auth.link_wallet(wallet_address=wallet_address, signature=signature)
@@ -211,5 +299,4 @@ def link_wallet(
         _api_error("Failed to link wallet", e)
     except httpx.RequestError as e:
         _error(f"Network error: {e}")
-
     _output(result)
