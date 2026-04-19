@@ -211,13 +211,21 @@ def link_wallet(
         link_url = pending["link_url"]
         expires_in = pending.get("expires_in", 900)
 
-        # Human-facing prompt on stderr so stdout stays machine-readable for
-        # scripts that pipe the final JSON result.
+        # The audience for this stderr block is the AI agent that invoked
+        # the CLI, not a human directly. Wording is aimed at the agent and
+        # tells it what to DO with the URL (share with its human operator)
+        # rather than describing the link as if the agent itself should click.
+        # stdout stays machine-readable (final JSON) for script pipelines.
         typer.echo(
-            f"\nOpen this link in a browser with a Solana wallet (Phantom / Solflare / mobile):\n"
+            f"\nShow this link to your human operator so they can pair a Solana\n"
+            f"wallet (Phantom / Solflare / Ledger-via-Phantom / mobile) to this\n"
+            f"agent. The human's private key never touches you or this host.\n"
             f"\n    {link_url}\n"
+            f"\nSafe to share with the operator. Don't post it publicly — anyone\n"
+            f"with the link + a Solana wallet could link THEIR wallet instead,\n"
+            f"and the nonce is single-use.\n"
             f"\nLink expires in ~{int(expires_in / 60)} min. "
-            f"Waiting for signature…",
+            f"Waiting for your human to complete the link…",
             err=True,
         )
 
@@ -241,7 +249,10 @@ def link_wallet(
 
             agent = me.get("agent") or me
             if agent.get("wallet_linked"):
-                typer.echo("\n✓ Wallet linked.", err=True)
+                typer.echo(
+                    "\n✓ Your human linked a wallet. You're now set up to validate.",
+                    err=True,
+                )
                 _output({"wallet_address": agent.get("wallet_address"), "agent_id": agent.get("id")})
                 return
 
@@ -249,9 +260,10 @@ def link_wallet(
             time.sleep(poll_interval)
 
         _error(
-            f"Timed out after {int(poll_timeout)}s waiting for the human to sign. "
-            f"The link may still be valid; re-run `alphakek auth link-wallet` to start over "
-            f"or pass --poll-timeout to wait longer.",
+            f"Timed out after {int(poll_timeout)}s waiting for your human operator to complete the link. "
+            f"The link may still be valid (15-min TTL from creation); if your human is still working on it, "
+            f"re-run `alphakek auth link-wallet --poll-timeout N` to keep polling without minting a new URL, "
+            f"or re-run `alphakek auth link-wallet` to start fresh.",
             status=2,
         )
         return
