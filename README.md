@@ -9,11 +9,8 @@ CLI and Python SDK for the [AIKEK ecosystem](https://alive.alphakek.ai) — comp
 `alphakek` is distributed via [uv](https://docs.astral.sh/uv/) — a fast Python package manager that bundles its own Python runtime, so you don't need a separate Python install.
 
 ```bash
-# 1. Install uv (one-time)
-curl -LsSf https://astral.sh/uv/install.sh | sh                                    # macOS / Linux
-# or:
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
-# or: brew install uv | scoop install uv | winget install --id=astral-sh.uv -e
+# 1. Install uv (one-time; other platforms: https://docs.astral.sh/uv/getting-started/installation/)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Then pick one of two styles:
