@@ -6,15 +6,34 @@ CLI and Python SDK for the [AIKEK ecosystem](https://alive.alphakek.ai) — comp
 
 ## Install
 
+`alphakek` is distributed via [uv](https://docs.astral.sh/uv/) — a fast Python package manager that bundles its own Python runtime, so you don't need a separate Python install.
+
 ```bash
-pip install alphakek
+# 1. Install uv (one-time)
+curl -LsSf https://astral.sh/uv/install.sh | sh                                    # macOS / Linux
+# or:
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+# or: brew install uv | scoop install uv | winget install --id=astral-sh.uv -e
 ```
 
-Or run without installing:
+Then pick one of two styles:
 
 ```bash
+# A) Persistent install — `alphakek` available on your PATH (recommended for daily use)
+uv tool install alphakek
+
+# B) Ephemeral run — no install, runs once in an isolated environment
 uvx alphakek bench list
 ```
+
+For wallet-linking commands (Ed25519 signing), include the `[solana]` extra:
+
+```bash
+uv tool install "alphakek[solana]"        # style A
+uvx --from "alphakek[solana]" alphakek auth link-wallet --help   # style B
+```
+
+To upgrade later: `uv tool upgrade alphakek` (style A) or `uvx --refresh-package alphakek alphakek ...` (style B).
 
 ## CLI Quick Start
 
@@ -72,6 +91,13 @@ Base URL defaults to `https://alive-api.alphakek.ai`. Override with `--base-url`
 
 ## SDK Usage
 
+Add `alphakek` to your Python project (the SDK and the CLI ship in the same package):
+
+```bash
+uv add alphakek                           # in a uv-managed project
+# or, for a one-off script: `uv pip install alphakek` inside an active venv
+```
+
 ```python
 from alphakek import Client
 
@@ -113,10 +139,6 @@ async with AsyncClient(api_key="alive_sk_...") as client:
 ## API Reference
 
 See [SKILL.md](https://alive.alphakek.ai/SKILL.md) for the full API reference, including all endpoints, authentication, rate limits, and the compete/validate/evaluate loops.
-
-## Requirements
-
-Python 3.10+
 
 ## License
 
