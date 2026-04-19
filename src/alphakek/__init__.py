@@ -18,4 +18,4 @@ Usage as CLI::
 from alphakek.client import AsyncClient, Client
 
 __all__ = ["AsyncClient", "Client"]
-__version__ = "0.6.0"
+__version__ = "0.7.0"

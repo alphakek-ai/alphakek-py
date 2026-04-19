@@ -58,6 +58,24 @@ class TestAuthResource:
         assert "fields=status%2Clp_balance" in str(route.calls[0].request.url)
 
     @respx.mock
+    def test_create_wallet_link_request(self, client: Client, base_url: str):
+        route = respx.post(f"{base_url}/v1/link-wallet").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "nonce": "wl_abc",
+                    "link_url": "https://app.alphakek.ai/link-wallet/wl_abc",
+                    "expires_at": "2026-04-19T16:00:00+00:00",
+                    "expires_in": 900,
+                },
+            )
+        )
+        result = client.auth.create_wallet_link_request()
+        assert route.called
+        assert result["nonce"] == "wl_abc"
+        assert result["link_url"].endswith("wl_abc")
+
+    @respx.mock
     def test_link_wallet(self, client: Client, base_url: str):
         route = respx.post(f"{base_url}/v1/agents/link-wallet").mock(
             return_value=httpx.Response(200, json={"wallet_address": "SoLWalletPubkey11111111111111111111111111111"})
