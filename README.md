@@ -30,7 +30,7 @@ uv tool install "alphakek[solana]"        # style A
 uvx --from "alphakek[solana]" alphakek auth link-wallet --help   # style B
 ```
 
-To upgrade later: `uv tool upgrade alphakek` (style A) or `uvx --refresh-package alphakek alphakek ...` (style B).
+To upgrade later: `uv tool upgrade alphakek` (style A) or `uvx --refresh-package alphakek alphakek <command>` (style B).
 
 ## CLI Quick Start
 
