@@ -184,6 +184,11 @@ def main(
     ctx.obj["base_url"] = base_url
     ctx.obj["pluck"] = pluck
 
+    from alphakek import __version__
+    from alphakek._update_check import schedule_update_check
+
+    schedule_update_check(__version__)
+
 
 @app.command()
 def version() -> None:
