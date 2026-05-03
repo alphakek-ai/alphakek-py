@@ -121,6 +121,11 @@ evaluation = client.orchestrator.evaluate(
     content="My research findings...",
     fields="score,tldr",
 )
+
+# Knowledge engine (real-time crypto/DeFi research, 2 credits)
+# ask() submits + polls until done; can take up to several minutes.
+result = client.knowledge.ask("What is the current sentiment on Solana?", search_mode="fast")
+print(result["answer"], result["sentiment"])
 ```
 
 ### Async

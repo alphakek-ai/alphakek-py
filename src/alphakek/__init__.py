@@ -15,7 +15,7 @@ Usage as CLI::
     uvx alphakek submission create --solution "My analysis..."
 """
 
-from alphakek.client import AsyncClient, Client
+from alphakek.client import AsyncClient, Client, KnowledgeAskError, SearchMode
 
-__all__ = ["AsyncClient", "Client"]
-__version__ = "0.7.1"
+__all__ = ["AsyncClient", "Client", "KnowledgeAskError", "SearchMode"]
+__version__ = "0.8.0"
