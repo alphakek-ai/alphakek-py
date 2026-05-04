@@ -5,11 +5,50 @@ Provides both sync (Client) and async (AsyncClient) interfaces.
 
 from __future__ import annotations
 
-from typing import Any, cast
+import asyncio
+import time
+from typing import Any, Literal, cast
 
 import httpx
 
 from alphakek._credentials import load_api_key, load_base_url
+
+_KNOWLEDGE_ASK_POLL_INTERVAL_DEFAULT: float = 5.0
+_KNOWLEDGE_ASK_TIMEOUT_DEFAULT: float = 900.0
+
+# Statuses the worker can report on the GET endpoint. Anything outside this
+# set is treated as an unexpected terminal state — the SDK doesn't know how
+# to make progress and shouldn't waste the caller's poll budget waiting.
+_KNOWN_NON_TERMINAL_STATUSES = frozenset({"pending", "running"})
+
+# Retrieval depth presets accepted by /v2/knowledge/ask.
+SearchMode = Literal["deep", "fast", "ultrafast"]
+
+
+class KnowledgeAskError(RuntimeError):
+    """Raised when /v2/knowledge/ask fails or times out client-side.
+
+    Attributes
+    ----------
+    task_id:
+        The job's UUID. Use it to GET ``/v2/knowledge/ask/{task_id}`` directly
+        if you want to debug the failure or retry the poll later.
+    status:
+        One of:
+
+        - ``"failed"`` — worker terminally failed the job (see ``error`` field
+          on the GET response for the reason).
+        - ``"timeout"`` — SDK's local ``timeout`` elapsed before the worker
+          reached a terminal status. The worker may still finish; resume
+          polling with ``status(task_id)``.
+        - ``"succeeded_no_result"`` — server returned ``status=succeeded`` but
+          no ``result`` payload. Server-side bug or DB inconsistency.
+    """
+
+    def __init__(self, message: str, *, task_id: str, status: str) -> None:
+        super().__init__(message)
+        self.task_id = task_id
+        self.status = status
 
 
 class _AuthResource:
@@ -279,6 +318,187 @@ class _SchemaResource:
         return cast(dict[str, Any], self._client._get("/openapi.json", auth=False))
 
 
+class _KnowledgeResource:
+    """Knowledge engine queries (real-time crypto/DeFi research).
+
+    The endpoint is asynchronous: ``ask()`` POSTs to enqueue a job, then polls
+    until the worker writes a result. Calls cost 2 credits each, refunded
+    automatically by the server on terminal failure.
+    """
+
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def submit(
+        self,
+        question: str,
+        *,
+        search_mode: SearchMode = "fast",
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Enqueue an ask job. POST /v2/knowledge/ask.
+
+        Returns ``{"task_id", "status", "poll_url"}``. Use ``status(task_id)``
+        to poll, or ``ask()`` for the high-level submit + wait helper.
+
+        ``timeout`` overrides the client's default per-request HTTP timeout
+        (used by ``ask()`` to bound the submit POST by the caller's overall
+        budget). ``None`` falls back to the client default.
+        """
+        return self._client._post(
+            "/v2/knowledge/ask",
+            json={"question": question, "search_mode": search_mode},
+            timeout=timeout,
+        )
+
+    def status(self, task_id: str) -> dict[str, Any]:
+        """Fetch current job state. GET /v2/knowledge/ask/{task_id}.
+
+        Returns ``{"task_id", "status", "result", "error"}``. ``result`` is
+        ``None`` until ``status == "succeeded"``; ``error`` is set when
+        ``status == "failed"``.
+        """
+        return cast(dict[str, Any], self._client._get(f"/v2/knowledge/ask/{task_id}"))
+
+    def ask(
+        self,
+        question: str,
+        *,
+        search_mode: SearchMode = "fast",
+        timeout: float = _KNOWLEDGE_ASK_TIMEOUT_DEFAULT,
+        poll_interval: float = _KNOWLEDGE_ASK_POLL_INTERVAL_DEFAULT,
+    ) -> dict[str, Any]:
+        """Submit a question and block until the answer is ready.
+
+        Convenience wrapper around ``submit()`` + ``status()`` polling.
+
+        Args:
+            question: Free-form natural-language query.
+            search_mode: ``"deep"`` (10 docs), ``"fast"`` (5, default), or ``"ultrafast"`` (3).
+            timeout: Maximum total seconds to wait before giving up. Defaults
+                to 15 minutes — long enough for the deepest LLM cycle the
+                server is configured for.
+            poll_interval: Seconds between GET polls. Defaults to 5s, matching
+                the API docs' recommendation.
+
+        Returns:
+            ``{"answer": str, "sources": [str], "sentiment": int}``.
+
+        Raises:
+            KnowledgeAskError: if the job fails terminally or the local timeout
+                fires before the job reaches a terminal status. Inspect
+                ``.task_id`` and ``.status`` on the exception.
+            ValueError: if ``poll_interval`` or ``timeout`` is negative, or
+                ``submit()`` returns a response with no ``task_id``.
+        """
+        if timeout < 0:
+            raise ValueError(f"timeout must be non-negative, got {timeout!r}")
+        if poll_interval < 0:
+            raise ValueError(f"poll_interval must be non-negative, got {poll_interval!r}")
+
+        # Set the deadline before the submit POST so the entire ask() call —
+        # not just the poll loop — fits inside the caller's ``timeout`` budget.
+        deadline = time.monotonic() + timeout
+
+        try:
+            submit_resp = self.submit(
+                question,
+                search_mode=search_mode,
+                timeout=min(30.0, max(0.0, timeout)) or None,
+            )
+        except httpx.TimeoutException:
+            raise KnowledgeAskError(
+                f"knowledge.ask: submit timed out within {timeout:.0f}s budget",
+                task_id="",
+                status="timeout",
+            ) from None
+        task_id = submit_resp.get("task_id")
+        if not task_id:
+            raise ValueError(f"knowledge.submit returned no task_id: {submit_resp!r}")
+        # Server tells us where to poll; fall back to the standard pattern if
+        # it ever omits the field so the SDK doesn't break on partial responses.
+        poll_url = submit_resp.get("poll_url") or f"/v2/knowledge/ask/{task_id}"
+
+        while True:
+            # Bound the per-request HTTP timeout by the caller's remaining
+            # budget so a slow server can't make ``ask(timeout=N)`` exceed N.
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s before completing the next poll; "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                )
+            try:
+                state = cast(
+                    dict[str, Any],
+                    self._client._get(poll_url, timeout=min(30.0, remaining)),
+                )
+            except httpx.TimeoutException:
+                # Per-request GET hit its bounded timeout — the poll itself
+                # outran the caller's remaining budget. Convert to the
+                # contract type so callers don't see raw httpx exceptions.
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s (per-request GET timed out); "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                ) from None
+            # ``job_status`` not ``status`` to avoid shadowing self.status().
+            job_status = state.get("status")
+            if job_status == "succeeded":
+                # A succeeded job with no/non-dict result is a server bug;
+                # surface it rather than silently returning {} and letting the
+                # caller build a hollow ResearchResult.
+                result = state.get("result")
+                if not isinstance(result, dict):
+                    raise KnowledgeAskError(
+                        f"knowledge.ask reports succeeded but result is missing or not a dict "
+                        f"(got {type(result).__name__})",
+                        task_id=task_id,
+                        status="succeeded_no_result",
+                    )
+                return result
+            if job_status == "failed":
+                raise KnowledgeAskError(
+                    f"knowledge.ask failed: {state.get('error') or 'unknown error'}",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if job_status is None:
+                # Server returned a poll body with no ``status`` field — that's
+                # a server bug, not an SDK-version issue, so surface it
+                # explicitly instead of falling through to the generic
+                # "SDK may be out of date" branch.
+                raise KnowledgeAskError(
+                    f"knowledge.ask: poll response missing 'status' field: {state!r}",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if job_status not in _KNOWN_NON_TERMINAL_STATUSES:
+                # Unknown terminal state (e.g. server adds "cancelled" or
+                # "expired" before the SDK is updated). No point polling for
+                # the next 15 min — surface immediately.
+                raise KnowledgeAskError(
+                    f"knowledge.ask got unexpected status {job_status!r}; "
+                    f"SDK may be out of date — poll {poll_url} directly",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if time.monotonic() >= deadline:
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s (task still {job_status!r}); "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                )
+            # Cap the sleep to the remaining timeout budget so a caller passing
+            # ask(timeout=1, poll_interval=10) doesn't actually wait 10s.
+            remaining = deadline - time.monotonic()
+            time.sleep(min(poll_interval, max(0.0, remaining)))
+
+
 class _BaseClient:
     """Shared client logic."""
 
@@ -317,6 +537,7 @@ class Client(_BaseClient):
         self.orchestrator = _OrchestratorResource(self)
         self.lambda_ = _LambdaResource(self)
         self.schema = _SchemaResource(self)
+        self.knowledge = _KnowledgeResource(self)
 
     def _get(
         self,
@@ -325,8 +546,15 @@ class Client(_BaseClient):
         params: dict[str, str] | None = None,
         auth: bool = True,
         allow_204: bool = False,
+        timeout: float | None = None,
     ) -> dict[str, Any] | None:
-        resp = self._http.get(path, params=params, headers=self._headers(auth))
+        # Per-request ``timeout`` override; ``None`` falls back to the client's
+        # default. Used by knowledge.ask()'s poll loop to bound a single GET
+        # by the caller's remaining ``timeout`` budget.
+        kwargs: dict[str, Any] = {"params": params, "headers": self._headers(auth)}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        resp = self._http.get(path, **kwargs)
         if allow_204 and resp.status_code == 204:
             return None
         resp.raise_for_status()
@@ -340,9 +568,13 @@ class Client(_BaseClient):
         params: dict[str, str] | None = None,
         auth: bool = True,
         extra_headers: dict[str, str] | None = None,
+        timeout: float | None = None,
     ) -> dict[str, Any]:
         headers = {**self._headers(auth), **(extra_headers or {})}
-        resp = self._http.post(path, json=json, params=params, headers=headers)
+        kwargs: dict[str, Any] = {"json": json, "params": params, "headers": headers}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        resp = self._http.post(path, **kwargs)
         resp.raise_for_status()
         return resp.json()
 
@@ -377,6 +609,7 @@ class AsyncClient(_BaseClient):
         self.orchestrator = _AsyncOrchestratorResource(self)
         self.lambda_ = _AsyncLambdaResource(self)
         self.schema = _AsyncSchemaResource(self)
+        self.knowledge = _AsyncKnowledgeResource(self)
 
     async def _get(
         self,
@@ -385,8 +618,13 @@ class AsyncClient(_BaseClient):
         params: dict[str, str] | None = None,
         auth: bool = True,
         allow_204: bool = False,
+        timeout: float | None = None,
     ) -> dict[str, Any] | None:
-        resp = await self._http.get(path, params=params, headers=self._headers(auth))
+        # Per-request ``timeout`` override; see sync ``_get`` for rationale.
+        kwargs: dict[str, Any] = {"params": params, "headers": self._headers(auth)}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        resp = await self._http.get(path, **kwargs)
         if allow_204 and resp.status_code == 204:
             return None
         resp.raise_for_status()
@@ -400,9 +638,13 @@ class AsyncClient(_BaseClient):
         params: dict[str, str] | None = None,
         auth: bool = True,
         extra_headers: dict[str, str] | None = None,
+        timeout: float | None = None,
     ) -> dict[str, Any]:
         headers = {**self._headers(auth), **(extra_headers or {})}
-        resp = await self._http.post(path, json=json, params=params, headers=headers)
+        kwargs: dict[str, Any] = {"json": json, "params": params, "headers": headers}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        resp = await self._http.post(path, **kwargs)
         resp.raise_for_status()
         return resp.json()
 
@@ -617,3 +859,169 @@ class _AsyncSchemaResource:
 
     async def openapi(self) -> dict[str, Any]:
         return cast(dict[str, Any], await self._client._get("/openapi.json", auth=False))
+
+
+class _AsyncKnowledgeResource:
+    """Async equivalent of `_KnowledgeResource`. See its docstring for context."""
+
+    def __init__(self, client: AsyncClient) -> None:
+        self._client = client
+
+    async def submit(
+        self,
+        question: str,
+        *,
+        search_mode: SearchMode = "fast",
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Enqueue an ask job. POST /v2/knowledge/ask.
+
+        Returns ``{"task_id", "status", "poll_url"}``. Use ``status(task_id)``
+        to poll, or ``ask()`` for the high-level submit + wait helper.
+
+        ``timeout`` overrides the client's default per-request HTTP timeout.
+        """
+        return await self._client._post(
+            "/v2/knowledge/ask",
+            json={"question": question, "search_mode": search_mode},
+            timeout=timeout,
+        )
+
+    async def status(self, task_id: str) -> dict[str, Any]:
+        """Fetch current job state. GET /v2/knowledge/ask/{task_id}.
+
+        Returns ``{"task_id", "status", "result", "error"}``. ``result`` is
+        ``None`` until ``status == "succeeded"``; ``error`` is set when
+        ``status == "failed"``.
+        """
+        return cast(dict[str, Any], await self._client._get(f"/v2/knowledge/ask/{task_id}"))
+
+    async def ask(
+        self,
+        question: str,
+        *,
+        search_mode: SearchMode = "fast",
+        timeout: float = _KNOWLEDGE_ASK_TIMEOUT_DEFAULT,
+        poll_interval: float = _KNOWLEDGE_ASK_POLL_INTERVAL_DEFAULT,
+    ) -> dict[str, Any]:
+        """Submit a question and await the answer.
+
+        Convenience wrapper around ``submit()`` + ``status()`` polling.
+
+        Args:
+            question: Free-form natural-language query.
+            search_mode: ``"deep"`` (10 docs), ``"fast"`` (5, default), or ``"ultrafast"`` (3).
+            timeout: Maximum total seconds to wait before giving up. Defaults
+                to 15 minutes — long enough for the deepest LLM cycle the
+                server is configured for.
+            poll_interval: Seconds between GET polls. Defaults to 5s, matching
+                the API docs' recommendation.
+
+        Returns:
+            ``{"answer": str, "sources": [str], "sentiment": int}``.
+
+        Raises:
+            KnowledgeAskError: if the job fails terminally, the local timeout
+                fires, or the server reports succeeded with no result. Inspect
+                ``.task_id`` and ``.status`` on the exception.
+            ValueError: if ``poll_interval`` or ``timeout`` is negative, or
+                ``submit()`` returns a response with no ``task_id``.
+        """
+        if timeout < 0:
+            raise ValueError(f"timeout must be non-negative, got {timeout!r}")
+        if poll_interval < 0:
+            raise ValueError(f"poll_interval must be non-negative, got {poll_interval!r}")
+
+        # Cache the loop: get_running_loop() is the idiomatic API since 3.7
+        # (get_event_loop() is deprecated in 3.10+), and we don't want to
+        # re-fetch it on every poll iteration.
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+
+        try:
+            submit_resp = await self.submit(
+                question,
+                search_mode=search_mode,
+                timeout=min(30.0, max(0.0, timeout)) or None,
+            )
+        except httpx.TimeoutException:
+            raise KnowledgeAskError(
+                f"knowledge.ask: submit timed out within {timeout:.0f}s budget",
+                task_id="",
+                status="timeout",
+            ) from None
+        task_id = submit_resp.get("task_id")
+        if not task_id:
+            raise ValueError(f"knowledge.submit returned no task_id: {submit_resp!r}")
+        poll_url = submit_resp.get("poll_url") or f"/v2/knowledge/ask/{task_id}"
+
+        while True:
+            # Bound the per-request HTTP timeout by the caller's remaining
+            # budget — see sync ``ask()`` for rationale.
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s before completing the next poll; "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                )
+            try:
+                state = cast(
+                    dict[str, Any],
+                    await self._client._get(poll_url, timeout=min(30.0, remaining)),
+                )
+            except httpx.TimeoutException:
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s (per-request GET timed out); "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                ) from None
+            # ``job_status`` not ``status`` to avoid shadowing self.status().
+            job_status = state.get("status")
+            if job_status == "succeeded":
+                result = state.get("result")
+                if not isinstance(result, dict):
+                    raise KnowledgeAskError(
+                        f"knowledge.ask reports succeeded but result is missing or not a dict "
+                        f"(got {type(result).__name__})",
+                        task_id=task_id,
+                        status="succeeded_no_result",
+                    )
+                return result
+            if job_status == "failed":
+                raise KnowledgeAskError(
+                    f"knowledge.ask failed: {state.get('error') or 'unknown error'}",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if job_status is None:
+                # Server bug: poll body has no ``status`` field. Surface
+                # explicitly so the caller doesn't get a misleading
+                # "SDK may be out of date" message.
+                raise KnowledgeAskError(
+                    f"knowledge.ask: poll response missing 'status' field: {state!r}",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if job_status not in _KNOWN_NON_TERMINAL_STATUSES:
+                # Unknown terminal state (e.g. server adds "cancelled" or
+                # "expired" before the SDK is updated). No point polling for
+                # the next 15 min — surface immediately.
+                raise KnowledgeAskError(
+                    f"knowledge.ask got unexpected status {job_status!r}; "
+                    f"SDK may be out of date — poll {poll_url} directly",
+                    task_id=task_id,
+                    status="failed",
+                )
+            if loop.time() >= deadline:
+                raise KnowledgeAskError(
+                    f"knowledge.ask timed out after {timeout:.0f}s (task still {job_status!r}); "
+                    f"poll {poll_url} directly for the result",
+                    task_id=task_id,
+                    status="timeout",
+                )
+            # Cap the sleep to the remaining timeout budget — see sync version.
+            remaining = deadline - loop.time()
+            await asyncio.sleep(min(poll_interval, max(0.0, remaining)))
