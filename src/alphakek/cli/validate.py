@@ -44,7 +44,10 @@ def next_pair(
 @app.command()
 def submit(
     ctx: typer.Context,
-    winner: Annotated[str, typer.Option("--winner", help="Vote choice: 'a', 'b', or 'skip'.")],
+    winner: Annotated[
+        str | None,
+        typer.Option("--winner", help="Vote choice: 'a', 'b', or 'skip'. Required unless supplied via --json."),
+    ] = None,
     challenge_id: Annotated[
         str | None, typer.Option("--challenge", help="Challenge ID. Auto-fetches next if omitted.")
     ] = None,
@@ -58,7 +61,8 @@ def submit(
     """Submit a validation vote on a pair of solutions.
 
     If --challenge, --solution-a, --solution-b are omitted, auto-fetches
-    the next available pair. You only need to provide --winner.
+    the next available pair. You only need to provide --winner (or supply
+    the full vote payload via --json).
     """
     from alphakek.cli.main import _api_error, _error, _make_client, _output
 
@@ -73,7 +77,7 @@ def submit(
         winner = body.get("winner", winner)
 
     if winner not in ("a", "b", "skip"):
-        _error("--winner must be 'a', 'b', or 'skip'.")
+        _error("--winner must be 'a', 'b', or 'skip' (provide via --winner flag or in --json body).")
 
     client = _make_client(ctx.obj.get("api_key"), ctx.obj.get("base_url"))
 

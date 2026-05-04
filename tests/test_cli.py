@@ -344,6 +344,47 @@ class TestValidateNextExitCode:
         assert result.exit_code == 0
 
 
+class TestValidateSubmit:
+    @patch("alphakek.cli.main._make_client")
+    def test_submit_via_json_payload_without_winner_flag(self, mock_make):
+        """--json must carry the winner without a separate --winner flag.
+
+        Regression guard: the CLI used to make --winner a required typer
+        Option, which forced callers to supply both --winner and --json
+        even though SKILL.md advertises --json as zero-translation.
+        """
+        mock_client = MagicMock()
+        mock_client.validation.submit.return_value = {"verification_id": "v1", "winner": "a"}
+        mock_make.return_value = mock_client
+
+        result = runner.invoke(
+            app,
+            [
+                "validate",
+                "submit",
+                "--json",
+                '{"challenge_id":"c1","solution_a_id":"sa","solution_b_id":"sb","winner":"a"}',
+            ],
+        )
+        assert result.exit_code == 0, result.stdout
+        mock_client.validation.submit.assert_called_once_with(
+            challenge_id="c1",
+            solution_a_id="sa",
+            solution_b_id="sb",
+            winner="a",
+        )
+
+    @patch("alphakek.cli.main._make_client")
+    def test_submit_without_winner_or_json_errors(self, mock_make):
+        """Calling submit with neither --winner nor --json must error clearly."""
+        result = runner.invoke(app, ["validate", "submit"], catch_exceptions=False)
+        assert result.exit_code != 0
+        # _error writes to stderr; CliRunner's mix_stderr=True (default in
+        # older typer) joins them, but newer versions split. Check both.
+        combined = (result.stdout or "") + (getattr(result, "stderr", None) or "")
+        assert "winner" in combined.lower()
+
+
 class TestBenchList:
     @patch("alphakek.cli.main._make_client")
     def test_list_benches(self, mock_make):
