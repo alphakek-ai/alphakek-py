@@ -438,6 +438,17 @@ class TestAsyncValidationResource:
         assert await client.validation.next_pair() is None
         assert await client.validation.next_validation() is None
 
+    @respx.mock
+    async def test_next_pair_passes_bench_filter(self, client: AsyncClient):
+        route = respx.get(f"{BASE}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200, json={"pair": None, "stats": {"verified": 0, "eligible_remaining": 0, "reason": "none_yet"}}
+            )
+        )
+        await client.validation.next_pair(bench="9" * 32)
+        assert route.called
+        assert "bench=" in str(route.calls[0].request.url)
+
 
 class TestAsyncContextManager:
     @respx.mock

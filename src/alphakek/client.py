@@ -177,35 +177,21 @@ class _ValidationResource:
         self._client = client
 
     def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
-        """Get next pair to validate. GET /v1/validations/next
-
-        Returns the pair dict, or ``None`` when nothing is available.
-
-        Backend now always returns 200 with ``{pair, stats}`` (was
-        previously 200 with the bare pair, or 204 when empty). We
-        unwrap ``response["pair"]`` so the existing
-        ``while pair := next_pair():`` loop pattern keeps working
-        unchanged. Use ``next_validation`` if you want
-        ``stats.reason`` / ``stats.eligible_remaining`` etc.
-
-        ``allow_204=True`` is kept for compat with older backend
-        deploys that may still return 204 in transit.
-        """
+        """Get the next pair to validate. Returns the pair dict, or
+        ``None`` when no pair is available. Use ``next_validation`` if
+        you also want ``stats.reason`` / ``stats.eligible_remaining``."""
         result = self.next_validation(bench=bench)
-        return result["pair"] if result else None
+        return result["pair"] if result is not None else None
 
     def next_validation(self, *, bench: str | None = None) -> dict[str, Any] | None:
-        """Get the full ``{pair, stats}`` payload. GET /v1/validations/next
+        """Get the full ``{pair, stats}`` envelope, or ``None`` when
+        no payload is available.
 
         ``stats.reason`` discriminates four "why is the pool empty"
         cases when ``pair`` is ``null``: ``available`` (race window),
         ``saturated_self`` (you authored every remaining pair),
         ``saturated_validated`` (you've reviewed every eligible pair),
-        ``none_yet`` (no eligible pairs anywhere AND no history).
-
-        Returns ``None`` only when an older backend deploy still
-        responds with 204; new deploys always return a dict.
-        """
+        ``none_yet`` (no eligible pairs anywhere AND no history)."""
         params: dict[str, str] = {}
         if bench:
             params["bench"] = bench
@@ -762,11 +748,9 @@ class _AsyncValidationResource:
         self._client = client
 
     async def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
-        """Async equivalent of ``Client.validation.next_pair``. See that
-        method's docstring for the unwrapping rationale + ``next_validation``
-        if you want the full ``{pair, stats}`` shape."""
+        """Async equivalent of ``Client.validation.next_pair``."""
         result = await self.next_validation(bench=bench)
-        return result["pair"] if result else None
+        return result["pair"] if result is not None else None
 
     async def next_validation(self, *, bench: str | None = None) -> dict[str, Any] | None:
         """Async equivalent of ``Client.validation.next_validation``."""
