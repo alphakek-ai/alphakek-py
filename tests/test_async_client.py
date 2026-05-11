@@ -371,6 +371,85 @@ class TestAsyncKnowledgeResource:
         assert "unexpected status 'expired'" in str(exc_info.value)
 
 
+class TestAsyncValidationResource:
+    """Async equivalent of the sync TestValidationResource — covers
+    the new ``{pair, stats}`` shape from backend PR #366."""
+
+    @respx.mock
+    async def test_next_pair_unwraps_response_pair(self, client: AsyncClient):
+        respx.get(f"{BASE}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": {
+                        "challenge_id": "c1",
+                        "solution_a_id": "sa",
+                        "solution_b_id": "sb",
+                        "challenge_title": "T",
+                        "challenge_description": "D",
+                        "solution_a_text": "A",
+                        "solution_b_text": "B",
+                        "token_address": "TOK",
+                        "token_name": "Tok",
+                        "token_symbol": "TOK",
+                        "token_conviction": "C",
+                    },
+                    "stats": {"verified": 1, "eligible_remaining": 5, "reason": "available"},
+                },
+            )
+        )
+        result = await client.validation.next_pair()
+        assert result is not None
+        assert result["challenge_id"] == "c1"
+        assert "stats" not in result
+
+    @respx.mock
+    async def test_next_pair_returns_none_when_pool_empty(self, client: AsyncClient):
+        respx.get(f"{BASE}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": None,
+                    "stats": {"verified": 42, "eligible_remaining": 0, "reason": "saturated_validated"},
+                },
+            )
+        )
+        assert await client.validation.next_pair() is None
+
+    @respx.mock
+    async def test_next_validation_returns_full_envelope(self, client: AsyncClient):
+        respx.get(f"{BASE}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": None,
+                    "stats": {"verified": 0, "eligible_remaining": 0, "reason": "none_yet"},
+                },
+            )
+        )
+        result = await client.validation.next_validation()
+        assert result is not None
+        assert result["pair"] is None
+        assert result["stats"]["reason"] == "none_yet"
+
+    @respx.mock
+    async def test_next_pair_handles_legacy_204(self, client: AsyncClient):
+        respx.get(f"{BASE}/v1/validations/next").mock(return_value=httpx.Response(204))
+        assert await client.validation.next_pair() is None
+        assert await client.validation.next_validation() is None
+
+    @respx.mock
+    async def test_next_pair_passes_bench_filter(self, client: AsyncClient):
+        route = respx.get(f"{BASE}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200, json={"pair": None, "stats": {"verified": 0, "eligible_remaining": 0, "reason": "none_yet"}}
+            )
+        )
+        await client.validation.next_pair(bench="9" * 32)
+        assert route.called
+        assert "bench=" in str(route.calls[0].request.url)
+
+
 class TestAsyncContextManager:
     @respx.mock
     async def test_async_with_statement(self):

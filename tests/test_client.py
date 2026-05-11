@@ -468,6 +468,97 @@ class TestKnowledgeResource:
         assert exc_info.value.status == "failed"
 
 
+class TestValidationResource:
+    """Cover the /v1/validations/next response shape that landed in
+    backend PR #366 — always 200 with ``{pair, stats}``. The SDK
+    unwraps ``response["pair"]`` for ``next_pair`` so existing
+    ``while pair := next_pair():`` loops keep working without
+    changes. ``next_validation`` exposes the full shape."""
+
+    @respx.mock
+    def test_next_pair_unwraps_response_pair(self, client: Client, base_url: str):
+        respx.get(f"{base_url}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": {
+                        "challenge_id": "c1",
+                        "solution_a_id": "sa",
+                        "solution_b_id": "sb",
+                        "challenge_title": "T",
+                        "challenge_description": "D",
+                        "solution_a_text": "A",
+                        "solution_b_text": "B",
+                        "token_address": "TOK",
+                        "token_name": "Tok",
+                        "token_symbol": "TOK",
+                        "token_conviction": "C",
+                    },
+                    "stats": {"verified": 1, "eligible_remaining": 5, "reason": "available"},
+                },
+            )
+        )
+        result = client.validation.next_pair()
+        # Existing loop pattern: ``while pair := next_pair():`` must keep
+        # working — assert the result has the inner pair shape, not the
+        # outer ``{pair, stats}`` envelope.
+        assert result is not None
+        assert result["challenge_id"] == "c1"
+        assert "stats" not in result
+
+    @respx.mock
+    def test_next_pair_returns_none_when_pool_empty(self, client: Client, base_url: str):
+        respx.get(f"{base_url}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": None,
+                    "stats": {"verified": 42, "eligible_remaining": 0, "reason": "saturated_validated"},
+                },
+            )
+        )
+        # ``while pair := next_pair():`` must exit cleanly when the
+        # backend says no pair — i.e. ``None``, not the envelope.
+        assert client.validation.next_pair() is None
+
+    @respx.mock
+    def test_next_validation_returns_full_envelope(self, client: Client, base_url: str):
+        respx.get(f"{base_url}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "pair": None,
+                    "stats": {"verified": 0, "eligible_remaining": 0, "reason": "none_yet"},
+                },
+            )
+        )
+        result = client.validation.next_validation()
+        # Callers that want stats access get the unwrapped envelope.
+        assert result is not None
+        assert result["pair"] is None
+        assert result["stats"]["reason"] == "none_yet"
+
+    @respx.mock
+    def test_next_pair_handles_legacy_204(self, client: Client, base_url: str):
+        """Older backend deploys (pre-PR #366) still respond with 204.
+        ``allow_204=True`` on the inner call keeps these working — the
+        SDK should return ``None`` either way."""
+        respx.get(f"{base_url}/v1/validations/next").mock(return_value=httpx.Response(204))
+        assert client.validation.next_pair() is None
+        assert client.validation.next_validation() is None
+
+    @respx.mock
+    def test_next_pair_passes_bench_filter(self, client: Client, base_url: str):
+        route = respx.get(f"{base_url}/v1/validations/next").mock(
+            return_value=httpx.Response(
+                200, json={"pair": None, "stats": {"verified": 0, "eligible_remaining": 0, "reason": "none_yet"}}
+            )
+        )
+        client.validation.next_pair(bench="9" * 32)
+        assert route.called
+        assert "bench=" in str(route.calls[0].request.url)
+
+
 class TestClientContextManager:
     @respx.mock
     def test_with_statement(self):

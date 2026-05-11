@@ -177,10 +177,21 @@ class _ValidationResource:
         self._client = client
 
     def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
-        """Get next pair to validate. GET /v1/validations/next
+        """Get the next pair to validate. Returns the pair dict, or
+        ``None`` when no pair is available. Use ``next_validation`` if
+        you also want ``stats.reason`` / ``stats.eligible_remaining``."""
+        result = self.next_validation(bench=bench)
+        return result["pair"] if result is not None else None
 
-        Returns None if no pair available (HTTP 204).
-        """
+    def next_validation(self, *, bench: str | None = None) -> dict[str, Any] | None:
+        """Get the full ``{pair, stats}`` envelope, or ``None`` when
+        no payload is available.
+
+        ``stats.reason`` discriminates four "why is the pool empty"
+        cases when ``pair`` is ``null``: ``available`` (race window),
+        ``saturated_self`` (you authored every remaining pair),
+        ``saturated_validated`` (you've reviewed every eligible pair),
+        ``none_yet`` (no eligible pairs anywhere AND no history)."""
         params: dict[str, str] = {}
         if bench:
             params["bench"] = bench
@@ -737,6 +748,12 @@ class _AsyncValidationResource:
         self._client = client
 
     async def next_pair(self, *, bench: str | None = None) -> dict[str, Any] | None:
+        """Async equivalent of ``Client.validation.next_pair``."""
+        result = await self.next_validation(bench=bench)
+        return result["pair"] if result is not None else None
+
+    async def next_validation(self, *, bench: str | None = None) -> dict[str, Any] | None:
+        """Async equivalent of ``Client.validation.next_validation``."""
         params: dict[str, str] = {}
         if bench:
             params["bench"] = bench
