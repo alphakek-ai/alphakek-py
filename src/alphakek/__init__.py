@@ -18,4 +18,4 @@ Usage as CLI::
 from alphakek.client import AsyncClient, Client, KnowledgeAskError, SearchMode
 
 __all__ = ["AsyncClient", "Client", "KnowledgeAskError", "SearchMode"]
-__version__ = "0.8.0"
+__version__ = "0.8.1"
